@@ -8,17 +8,20 @@ setup(
     description="CLI tools for interacting with RaceDB",
     long_description=open("racedbcli/README.md").read(),
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/racedbcli",  # Change to your repo URL
+    url="https://github.com/stuartlynne/racedbcli",  # Change to your repo URL
     packages=find_packages(),
     package_data={
-        "racedbcli.cli": ["members.xlsx"],
     },
     include_package_data=True,
     install_requires=[
+        "autopage",
+        "psycopg2",
+        "subprocess"
         "requests",
         "openpyxl",
         "pandas",
-        "click"
+        "click",
+        "BeautifulSoup",
     ],
     entry_points={
         "console_scripts": [

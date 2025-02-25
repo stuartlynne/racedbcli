@@ -4,12 +4,12 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 
-def upload_file(racedb, next_path, data=None, files=None, tableCheck=False, preCheck=False, ):
+def upload_file(session, base_url, next_path, data=None, files=None, tableCheck=False, preCheck=False, ):
 
     # 1. GET the upload form page
-    upload_form_url = f"{racedb.base_url.rstrip('/')}/{next_path.lstrip('/')}"
+    upload_form_url = f"{base_url.rstrip('/')}/{next_path.lstrip('/')}"
     print(f"=== GET to upload form page: {upload_form_url}", file=sys.stdout)
-    r_get_upload = racedb.session.get(upload_form_url)
+    r_get_upload = session.get(upload_form_url)
     if r_get_upload.status_code != 200:
         print("Could not load upload form page successfully.", file=sys.stdout)
         print(r_get_upload.text, file=sys.stdout)
@@ -66,7 +66,7 @@ def upload_file(racedb, next_path, data=None, files=None, tableCheck=False, preC
     headers_upload = {"Referer": upload_form_url}
 
     print(f"=== POST file to: {upload_action_url} data: {data}", file=sys.stdout)
-    r_post_upload = racedb.session.post(
+    r_post_upload = session.post(
         upload_action_url,
         data=data,
         files=files,
@@ -87,12 +87,13 @@ def upload_file(racedb, next_path, data=None, files=None, tableCheck=False, preC
         table = soup_response.find("table", {
             "class": "table table-hover table-sm table-condensed"
         })
-        if table:
-            print("=== Upload Result Table ===", file=sys.stdout)
-            print_table_as_text(table)
+        if not table:
+            print("No table found with class='table table-hover table-sm table-condensed'.", file=sys.stdout)
+            print("Full response:\n", r_post_upload.text, file=sys.stdout)
             return
-        preCheck = True
-    if preCheck:
+        print("=== Upload Result Table ===", file=sys.stdout)
+        print_table_as_text(table)
+    elif preCheck:
         pre_block = soup_response.find("pre")
         if pre_block:
             print("=== Upload Summary ===", file=sys.stdout)
@@ -133,4 +134,19 @@ def print_table_as_text(table):
         row_cells = [td.get_text(strip=True) for td in tds]
         print(" | ".join(row_cells), file=sys.stdout)
 
+
+def main():
+    # Create a session (login if required)
+    session = requests.Session()
+    # For example, if you need to log in first:
+    # session.post("https://example.com/login", data={"username":"foo","password":"bar"})
+
+    base_url = "https://example.com"
+    file_path = "/path/to/my_excel_file.xlsx"
+    next_path = "upload-form/"  # The page with your <form>
+
+    upload_file(session, base_url, file_path, next_path)
+
+if __name__ == "__main__":
+    main()
 

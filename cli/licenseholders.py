@@ -1,42 +1,20 @@
 #!/usr/bin/env python3
 
 import sys
-#import argparse
+import os
 import autopage, argparse
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
-from login import session_login
-from upload import upload_file
-from findsql import find_competition
+if __name__ == "__main__":
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from libs.racedb import RaceDB
+from libs.racedbsql import RaceDBSQL
 
-def login_and_upload(
-    base_url,
-    username,
-    password,
-    file_path,
-):
+def upload_licensholders(racedb, filename,):
     next_path = "RaceDB/LicenseHolders/LicenseHoldersImportExcel/"
-
-    """
-    1) Logs into RaceDB (Django) by:
-       - GETing the login form to retrieve the CSRF cookie + token.
-       - POSTing username, password, next, plus that CSRF token.
-    2) Navigates to the next_path page (upload form).
-    3) Parses the <form> action properly (handling blank or relative).
-    4) Uploads a file with the new CSRF token from the upload form.
-    5) Extracts the <pre> text from the server's response.
-    """
-
-    # 1 and 2
-    session = session_login(base_url, username, password)
-
-    # 3, 4, and 5
-    # set_team_all_disciplines = True
-    # update_license_codes = True
-    # ok-submit = OK
-    upload_file(session, base_url, next_path, tableCheck=True, 
-                files= { 'excel_file': open(file_path, 'rb'), },
+    racedb.upload_file(next_path, tableCheck=True, 
+                files= { 'excel_file': open(filename, 'rb'), },
                 data={
                     "set_team_all_disciplines": "on",
                     "update_license_codes": "on",
@@ -55,20 +33,23 @@ def main():
     parser.add_argument('--password', type=str, default=None, help='authentication password')
     parser.add_argument('--xlsx', type=str, default='', help='License Holder XLSX file for upload')
 
+    if len(sys.argv) == 1:
+        parser.print_help(sys.stderr)
+        sys.exit(1)
+
+
     args = parser.parse_args()
     
-    base_url = args.host        # e.g. http://192.168.250.51:9080
+    host = args.host        # e.g. http://192.168.250.51:9080
     username = args.username    # e.g. super
     password = args.password    # e.g. super
-    file_path = args.xlsx       # e.g. /path/to/file.xlsx
+    filename = args.xlsx       # e.g. /path/to/file.xlsx
+
+    sql = RaceDBSQL(host=host, )
+    racedb = RaceDB(host=host, username=username, password=password)
 
     with autopage.AutoPager(line_buffering=True, reset_on_exit=False) as sys.stdout:
-        login_and_upload(
-            base_url=base_url,
-            username=username,
-            password=password,
-            file_path=file_path,
-        )
+        upload_licensholders(racedb, filename,)
 
 if __name__ == "__main__":
     main()

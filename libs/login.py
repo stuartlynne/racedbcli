@@ -51,4 +51,5 @@ def session_login(base_url, username, password):
         print(r_post_login.text, file=sys.stdout)
         exit(1)
 
+    print("=== Login successful.", file=sys.stdout)
     return session

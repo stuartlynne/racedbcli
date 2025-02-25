@@ -3,7 +3,7 @@ import sys
 import os
 
 
-def save_file(final_response, filename=None):
+def save_file(racedb, final_response, filename=None):
     
     # 4) Determine filename from 'Content-Disposition' if present
     content_disp = final_response.headers.get("Content-Disposition", "")

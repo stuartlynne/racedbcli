@@ -9,7 +9,7 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 
-def download_file(session, base_url, download_url, data=None):
+def download_file(racedb, download_url=None, data=None):
     """
     1) GET the page at base_url/download_url (which contains the form).
     2) Parse out the csrfmiddlewaretoken from the hidden input.
@@ -29,9 +29,9 @@ def download_file(session, base_url, download_url, data=None):
     """
 
     # 1) Construct URL and GET the form page
-    page_url = f"{base_url.rstrip('/')}/{download_url.lstrip('/')}"
+    page_url = f"{racedb.base_url.rstrip('/')}/{download_url.lstrip('/')}"
     print(f"GET {page_url}", file=sys.stdout)
-    r_get = session.get(page_url)
+    r_get = racedb.session.get(page_url)
     print('Status code:', r_get.status_code)
     if r_get.status_code != 200:
         print(f"Failed to GET page: {r_get.status_code}", file=sys.stdout)
@@ -70,7 +70,7 @@ def download_file(session, base_url, download_url, data=None):
     }
     print(f"POST to {post_url} data:{data}", file=sys.stdout)
 
-    r_post = session.post(post_url, data=data, headers=headers, stream=True)
+    r_post = racedb.session.post(post_url, data=data, headers=headers, stream=True)
     # stream=True so we can download file in chunks
 
     if r_post.status_code not in (200, 201, 202, 302):

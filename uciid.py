@@ -4,7 +4,7 @@
 # Convienence wrapper for running uciid directly from source tree.
 
 
-from cli.uciid import main
+from licenses.uciid import main
 
 if __name__ == '__main__':
     main()
