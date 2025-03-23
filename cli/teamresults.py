@@ -365,8 +365,6 @@ TeamEvents = {}
 #   3   TESSIER, nathan     TEMP        Gastown         41  51  24 (4th) +6         17 (6th) +2
 #   4   AMANSE, Joseph      PR2307197   PVR-ACT Fast    34  58  16 (5th)            18 (7th) +4
 
-
-
 def xlrd_iterate_excel_rows(filename):
     wb = open_workbook(filename)
     for sheet in wb.sheets():
@@ -432,6 +430,8 @@ def xlrd_iterate_excel_rows(filename):
                   print('      [%2d%2d%2d] %5s %s' % (tindex, rindex, eindex, event_name, TeamEvents[sheet.name][eindex]))
     print('-------------------------------------')
 
+
+
 def safe_float(value):
     """ Convert value to float safely, returning 0 if conversion fails. """
     try:
@@ -446,46 +446,44 @@ def iterate_excel_rows(filename):
         cat_rider_results = {}
         cat_rider_events = {}
         event_names = []
-        
+        event_start_index = 7  # events now start at column 7 due to 'Gap' column
+
         for row_index, row in enumerate(sheet.iter_rows(values_only=True)):
             cellzero = row[0]
-            # Look for "Pos" line to get the event names
-            if isinstance(cellzero, str) and cellzero.strip() == "Pos":
-                event_names = list(row[6:])  # Store event names
-                continue
             
-            # Skip lines that don't start with a number
+            # Header row with event names
+            if isinstance(cellzero, str) and cellzero.strip().lower() == "pos":
+                event_names = list(row[event_start_index:])  # skip 'Gap'
+                continue
+
+            # Skip non-numeric starting rows
             if not isinstance(cellzero, (int, float)):
                 continue
-            
-            # Extract rider data
+
             rider = row[1] or "Unknown"
             team = row[4] or "Independent"
-            points = safe_float(row[5])  # Ensure points is a float
-            
+            points = safe_float(row[5])  # column 5 is Points
+
             if team not in cat_teams:
                 cat_teams[team] = 0
                 cat_rider_results[team] = {}
                 cat_rider_events[team] = {}
-            
+
             if rider not in cat_rider_results[team]:
                 cat_rider_results[team][rider] = 0
                 cat_rider_events[team][rider] = []
 
-            # Accumulate team and rider points
             cat_teams[team] += points
             cat_rider_results[team][rider] += points
-            
-            # Process event results
+
+            # Extract event results starting after 'Gap'
             for col_index, event_name in enumerate(event_names):
-                result = row[col_index + 6]
+                result = row[col_index + event_start_index]
                 if result not in [None, ""]:
                     cat_rider_events[team][rider].append((event_name, result))
 
-        # Sort teams by total points in descending order
+        # Sort teams and put Independent last
         sorted_results = dict(sorted(cat_teams.items(), key=operator.itemgetter(1), reverse=True))
-        
-        # Ensure "Independent" is always last
         if "Independent" in sorted_results:
             independent = sorted_results.pop("Independent")
             sorted_results["Independent"] = independent
