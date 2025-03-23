@@ -221,9 +221,8 @@ def category_table(doc, tag, text, category, results, team_rider_results, team_r
                         team_rider_table(doc, tag, text, category, team, team_rider_results, team_rider_events, team_events)
 
 
-def create_html(xls_filename, date, team_rider_results, team_results, team_rider_events, team_events):
-    filename = xls_filename.replace('.xlsx', '_Teams.html')
-    title = xls_filename.replace('.xlsx', '')
+def create_html(xlsx_filename, html_filename, date, team_rider_results, team_results, team_rider_events, team_events):
+    title = xlsx_filename.replace('.xlsx', '')
     title = title.replace('_', ' ').replace('-', ' ') + ' Team Results'
     #print('filename: %s' % filename)
     #print('title: %s' % title)
@@ -349,7 +348,7 @@ def create_html(xls_filename, date, team_rider_results, team_results, team_rider
 
 
     # write it out
-    with open(filename, 'w') as f:
+    with open(html_filename, 'w') as f:
         f.write(indent(doc.getvalue(), indent_text=False))
 
 TeamResults = {}
@@ -499,10 +498,15 @@ def iterate_excel_rows(filename):
 
 
 if __name__ == "__main__":
-    xls_filename = sys.argv[1]
-    m_time = os.path.getmtime(xls_filename)
+    xlsx_filename = sys.argv[1]
+    if len(sys.argv) > 2:
+        html_filename = sys.argv[2]
+    else:
+        html_filename = xlsx_filename.replace('.xlsx', '_Teams.html')
+        
+    m_time = os.path.getmtime(xlsx_filename)
     dt_m = datetime.datetime.fromtimestamp(m_time).strftime('%Y-%m-%d %H:%M:%S')
 
-    iterate_excel_rows(xls_filename)
-    create_html(xls_filename, dt_m, TeamRiderResults, TeamResults, TeamRiderEvents, TeamEvents)
+    iterate_excel_rows(xlsx_filename)
+    create_html(xlsx_filename, html_filename, dt_m, TeamRiderResults, TeamResults, TeamRiderEvents, TeamEvents)
 
