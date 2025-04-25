@@ -1,7 +1,11 @@
+import sys
 import pandas as pd
 import xlsxwriter
 
 def create_xlsx_file(filename, headers, data):
+    print('create_xlsx_file:', filename, headers, file=sys.stdout)
+    for i, d in enumerate(data):
+        print("[%d] %s" % (i, d), file=sys.stdout)
     # Convert data to a Pandas DataFrame
     df = pd.DataFrame(data, columns=headers.keys())
 

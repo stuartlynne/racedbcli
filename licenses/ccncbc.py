@@ -47,96 +47,13 @@ from libs.upload import upload_file
 
 # 
 
-# Class to accumulate license holders, then to create and upload an XLSX file 
-class UploadLicenseHolders:
-    def __init__(self, host=None, racedb=None, username=None, password=None, ): 
-        self.host = host
-        self.racedb = racedb
-        self.username = username
-        self.password = password
-        self.data = []
-
-
-    def append_data(self, first_name=None, last_name=None, uci_id=None, license_number=None, team=None, dob=None, gender='M', note=None, comments=None):
-        self.data.append({
-            'Last Name': last_name,
-            'First Name': first_name,
-            'License': license_number,
-            'UCI ID': uci_id,
-            'DOB': dob,
-            'Gender': gender,
-            'Team': team,
-            'Note': note,
-            'Comments': comments,
-        })
-
-    # create new license holder, DoB jan 1, Year based on age from CCN, gender male
-    #def new_license_holder(self, first_name, last_name, uci_id, license_number, team):
-    def new_license_holder(self, first_name, last_name, uci_id, person,):
-        print(f"No license holder found for {first_name} {last_name}.", file=sys.stdout)
-        license_number = person["license_number"]
-        team = person["team"]
-        age = person["age"]
-        dob = f"01-01-{2025 - age}"
-        self.append_data(first_name=first_name, last_name=last_name, uci_id=uci_id, 
-                         license_number=license_number, team=team, dob=dob, comments="New license holder", note="FIX AGE AND GENDER!")
-
-    # update license holder with new data based on last, first names and DoB
-    def update_license_holder(self, first_name=None, last_name=None, dob=None, uci_id=None, license_number=None, team=None, msg=None):
-        print(f"Updating license holder for {first_name} {last_name}.", file=sys.stdout)
-        self.append_data(first_name=first_name, last_name=last_name, uci_id=uci_id, 
-                         license_number=license_number, team=team, dob=dob, comments=f"Update {msg}")
-
-
-    def create_xlsx_file(self, data):
-        file_path = "license_holders.xlsx"
-        with open(file_path, "wb") as output:
-            df = pd.DataFrame(data, columns=["Last Name", "First Name", "License", "UCI ID", "DOB", "Gender", "Team", "Note", "Comments"])
-            df.to_excel(output, index=False, engine='xlsxwriter')
-        return open(file_path, 'rb')
-
-
-    def create_xlsx_in_memory(self, data):
-        output = io.BytesIO()
-        df = pd.DataFrame(data, columns=["Last Name", "First Name", "License", "UCI ID", "DOB", "Gender", "Team", "Note", "Comments"])
-        df.to_excel(output, index=False, engine='xlsxwriter')
-        output.seek(0)
-        return output
-
-    def login_and_upload(self,):
-
-        if True:
-            xlsx_file = self.create_xlsx_file(self.data)
-        xlsx_file = self.create_xlsx_in_memory(self.data)
-
-        next_path = "RaceDB/LicenseHolders/LicenseHoldersImportExcel/"
-
-        self.racedb.upload_file(next_path, tableCheck=True,
-            files={'excel_file': ('license_holders.xlsx', xlsx_file, )},
-            data={
-                "set_team_all_disciplines": "on",
-                "update_license_codes": "on",
-                "ok-submit": "OK",
-            },)
-
-        #session = session_login(self.host, self.username, self.password)
-        #upload_file(session, self.host, next_path, tableCheck=True, 
-        #    #files= { 'excel_file': open(file_path, 'rb'), },
-        #    #files={'excel_file': ('license_holders.xlsx', xlsx_file, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')},
-        #    files={'excel_file': ('license_holders.xlsx', xlsx_file, )},
-        #    data={
-        #        "set_team_all_disciplines": "on",
-        #        "update_license_codes": "on",
-        #        "ok-submit": "OK",
-        #    },)
-
 
 # a class to parse the membership data from the Cycling BC provided xlsx file.
 # The first and last name are used to fetch the membership data from the Cycling BC API and local RaceDB.
 #
 class GetLicenseholders:
-    def __init__(self, upload=None, sql=None, host=None, username=None, password=None, xlsfile=None):
-        self.upload = upload
+    def __init__(self, racedb=None, sql=None, host=None, username=None, password=None, xlsfile=None):
+        self.racedb = racedb
         self.sql = sql
         self.host = host
         self.username = username
@@ -176,26 +93,42 @@ class GetLicenseholders:
     #   - missing in RaceDB
     #   - license number does not match
     #   - uci id does not match
-    def check_license_holder(self, first_name=None, last_name=None, uci_id=None, license_holder=None, person=None, msg=None):
-        print(f"Checking: {first_name} {last_name} {uci_id} using {msg}", file=sys.stdout)
-        print(f"  Person: {person}", file=sys.stdout)
-        print(f"  License Holder: {license_holder}", file=sys.stdout)
+    def check_license_holder(self, first_name=None, last_name=None, uci_id=None, license_holder=None, member=None, team=None, msg=None):
+        print(f"Checking: {first_name} {last_name} {uci_id} team: {team} using {msg}", file=sys.stdout)
+        print(f"  Member: {member}", file=sys.stderr)
+        print(f"  License Holder: {license_holder}", file=sys.stderr)
         if not license_holder:
-            self.upload.new_license_holder(first_name, last_name, uci_id, person)
+            self.racedb.new_license_holder(first_name=first_name, last_name=last_name, uci_id=uci_id, 
+                  dob=None, license_number=member["license_number"], team=team, msg="missing")
             return
-        if person["license_number"] != license_holder["license_code"]:
-            self.upload.update_license_holder(first_name=first_name, last_name=last_name, uci_id=uci_id, 
-                  dob=license_holder['date_of_birth'], license_number=person["license_number"], team=person["team"], msg="license number")
+
+        if member["license_number"] != license_holder["license_code"]:
+            self.racedb.update_license_holder(first_name=first_name, last_name=last_name, uci_id=uci_id, 
+                  dob=license_holder['date_of_birth'], license_number=member["license_number"], team=team, msg="license number")
             return
-        if person["uci_id"] != license_holder["uci_id"]:
-            self.upload.update_license_holder(first_name=first_name, last_name=last_name, uci_id=uci_id, 
-                  dob=license_holder['date_of_birth'], license_number=person["license_number"], team=person["team"], msg="uci id")
+        if member["uci_id"] != license_holder["uci_id"]:
+            self.racedb.update_license_holder(first_name=first_name, last_name=last_name, uci_id=uci_id, 
+                  dob=license_holder['date_of_birth'], license_number=member["license_number"], team=team, msg="uci id")
+            return
+
+        if team:
+            teams = self.sql.find_teams(first_name, last_name, member["license_number"])
+            if team and len(teams) == 0:
+                self.racedb.update_license_holder(first_name=first_name, last_name=last_name, uci_id=uci_id, 
+                      dob=license_holder['date_of_birth'], license_number=member["license_number"], team=team, msg="missing team")
+                return
+
+            for teamdict in teams:
+                if teamdict['team'] != team:
+                    self.racedb.update_license_holder(first_name=first_name, last_name=last_name, uci_id=uci_id, 
+                          dob=license_holder['date_of_birth'], license_number=member["license_number"], team=team, msg="new team")
+                    return
 
         
 
     # Function to extract relevant data from JSON
     # There may be multiple memberships for the first name and last name that are
-    # actually different people, uci_id is the best way to identify a person.
+    # actually different people, uci_id is the best way to identify a member.
     #
     # Find the matching data from the racedb database and return the data to
     # get DoB and gender, then verify that racedb data matches the CCN data.
@@ -204,9 +137,10 @@ class GetLicenseholders:
     #   - team name (todo, will need additional sql queries)
     #
     def extract_data(self, first_name=None, last_name=None, team=None, data=None):
+        #print(f"Extracting data for {first_name} {last_name} team: {team}", file=sys.stdout)
         for count, result in enumerate(data.get("results", [])):
             for membership in result.get("lookup_identity_memberships", []):
-                person = {
+                member = {
                     "first_name": membership["identity_snapshot"]["first_name"],
                     "last_name": membership["identity_snapshot"]["last_name"],
                     "age": membership["identity_snapshot"]["age"],
@@ -223,39 +157,42 @@ class GetLicenseholders:
                     "team": team,
                 }
                 
-                uci_id = person["uci_id"]
+                uci_id = member["uci_id"]
                 license_holder = self.sql.find_uci_id(uci_id)
                 if license_holder:
                     self.check_license_holder(first_name=first_name, last_name=last_name, uci_id=uci_id, 
-                          license_holder=license_holder, person=person, msg="uci id",)
+                          license_holder=license_holder, member=member, team=team, msg="uci id",)
                 else:
                     license_holders = self.sql.find_name(first_name, last_name)
                     if not license_holders:
                         self.check_license_holder(first_name=first_name, last_name=last_name, uci_id=uci_id, 
-                          license_holder=None, person=person, msg="name not found",)
+                          license_holder=None, member=member, team=team, msg="name not found",)
                     else:
                         for license_holder in license_holders:
                             self.check_license_holder(first_name=first_name, last_name=last_name, uci_id=uci_id, 
-                                 license_holder=license_holder, person=person, msg='name found',)
-                print('--------------------------------------------', file=sys.stdout)
+                                 license_holder=license_holder, member=member, team=team, msg='name found',)
+                #print('--------------------------------------------', file=sys.stdout)
 
 
     def process_cbc(self, ):
         # Read the XLSX file and iterate through rows
         xlsx_file = "members.xlsx"  # Update with your actual file path
-        df = pd.read_excel(xlsx_file)
+        df = pd.read_excel(xlsx_file, keep_default_na=False, )
+        df = df.where(pd.notna(df), None)
 
 
         all_data = []
         for count, (index, row) in enumerate(df.iterrows()):
             first_name, last_name, team = row["First Name"], row["Last Name"], row["Primary Club / Team"]
-            print('Processing:', first_name, last_name, file=sys.stdout)
+            print(f"Processing[{count}]: {first_name} {last_name} team: {team}", file=sys.stdout)
             data = self.fetch_membership_data(first_name, last_name)
+            if team == 'n/a':
+                team = None
             self.extract_data(first_name=first_name, last_name=last_name, team=team, data=data)
             #if data:
             #    all_data.extend(extract_data(host, first_name, last_name, team, data))
-            if count > 100:
-                break
+            #if count > 100:
+            #    break
 
         # Sort the list of dicts by last name, then by first name
         #sorted_data = sorted(all_data, key=lambda x: (x["last_name"], x["first_name"]))
@@ -302,13 +239,13 @@ def main():
     #host = host.removeprefix("https://").removeprefix("http://").split(":")[0]
     sql = RaceDBSQL(host)
     racedb = RaceDB(host=host, username=username, password=password)
-    upload = UploadLicenseHolders(host=host, racedb=racedb, username=username, password=password,)
-    getlicenseholders = GetLicenseholders(upload=upload, sql=sql, host=host, username=username, password=password, xlsfile=xlsfile)
+    #upload = UploadLicenseHolders(host=host, racedb=racedb, username=username, password=password,)
+    getlicenseholders = GetLicenseholders(racedb=racedb, sql=sql, host=host, username=username, password=password, xlsfile=xlsfile)
 
     os.environ['LESS'] += f" -F --quit-if-one-screen"
     with autopage.AutoPager(line_buffering=True, reset_on_exit=False) as sys.stdout:
         getlicenseholders.process_cbc()
-        upload.login_and_upload()
+        racedb.upload_license_holders()
         return
         find_jan01(sql)
 

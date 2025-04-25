@@ -3,6 +3,15 @@ import sys
 # map registered category to event category
 localride_spring_series_map_categories = {
 
+    "Elite Men Cat 1/2/3":         "Elite",
+    "Elite Women Cat 1/2/3":       "Elite",
+    "Men Cat 3":                    "Cat 3",
+    "Men Cat 4":                    "Cat 4",
+    "Master Men A":                 "Master A",
+    "Men Novice / Cat 5":           "Cat 5",
+    "Master Men B":                 "Master B",
+    "Women Cat 3,4,5":              "Cat 3/4/5",
+
     "Open Cat 1,2,3":               "Elite",
     "Women Cat 1,2,3":              "Elite",
     "Men Master":                   "Master A", 
@@ -10,6 +19,20 @@ localride_spring_series_map_categories = {
     "Men Cat 4":                    "Cat 4",
     "Men Cat 5, Novice":            "Cat 5",
     "Women Cat 3, 4 , 5, Novice":   "Cat 3/4/5"
+}
+
+# map registered category to event category
+thrashers_spring_series_map_categories = {
+    "Cat 1/2 Men":                  "Elite",
+    "Cat 1/2/3 Women":              "Elite",
+    "Cat 3 Men":                    "Cat 3",
+    "Cat 4 Men":                    "Cat 4",
+    "Master Men":                   "Master A",
+    "Men's Beer League 40+":        "Master B",
+    "Open Men (Cat 5)":             "Cat 5",
+    "Open Women (Cat 4)":           "Cat 3/4/5",
+    "Youth Price":                  "Cat 5"
+
 }
 
 # check event category against license category
@@ -22,20 +45,24 @@ spring_series_event_categories = [
         ('Master 45-54',        'M',    (45,54),     ['Master A', 'Master B', ]),
         ('Master 55-64',        'M',    (55,64),     ['Master A', 'Master B', ]),
         ('Master 65+',          'M',    (65,None),   ['Master A', 'Master B', ]),
+
         ('Master 35-44',        'F',    (35,44),     ['Cat 3/4/5', ]),
         ('Master 45-54',        'F',    (45,54),     ['Cat 3/4/5', ]),
         ('Master 55-64',        'F',    (55,64),     ['Cat 3/4/5', ]),
         ('Master 65+',          'F',    (65,None),   ['Cat 3/4/5', ]),
+
         ('Cat 1',               'M',    (None, None),['Elite', ]),
         ('Cat 2',               'M',    (None, None),['Elite', ]),
         ('Cat 3',               'M',    (None, None),['Cat 3', ]),
         ('Cat 4',               'M',    (None, None),['Cat 4', ]),
         ('Cat 5',               'M',    (None, None),['Cat 5', ]),
+
         ('Cat 1',               'F',    (None, None),['Elite', ]),
         ('Cat 2',               'F',    (None, None),['Elite', ]),
         ('Cat 3',               'F',    (None, None),['Cat 3/4/5', ]),
         ('Cat 4',               'F',    (None, None),['Cat 3/4/5', ]),
         ('Cat 5',               'F',    (None, None),['Cat 3/4/5', ]),
+
         ('Junior',              'M',    (17, 18),    ['Elite', 'Cat 3', 'Cat 4', 'Cat 5'],),
         ('Youth',               'M',    (None, 16),    ['Cat 3', 'Cat 4', 'Cat 5'],),
         ('Under 17',            'M',    (15, 16),    ['Cat 3', 'Cat 4', 'Cat 5'],),
@@ -79,8 +106,10 @@ spring_series_event_categories = [
 # Road :: Youth :: Under 15'
 
 
-thrashers_cross_extras = [
-        "RFID Timing Tag -", "Junior W/M Pricing", "Second Race Add On", 
+thrashers_extras = [
+        "RFID Timing Tag -", 
+        "Junior W/M Pricing", 
+        "Second Race Add On", 
         "THRASHERS T-Shirt - Small", 
         "THRASHERS T-Shirt - S", 
         "THRASHERS T-Shirt - Medium",
@@ -111,8 +140,7 @@ thrashers_map_categories = {
         "Intermediate Women":   "Intermediate",
         "Novice Men":           "Novice",
         "Novice Women":         "Novice",
-        "Single Speed W/M":     "Single Speed",
-        "Junior W/M Pricing":   "Intermediate",
+        "Youth Price":          "Youth",
 }
 # check license, gender, age to get list of event categories allowed
 thrashers_cross_event_categories = [
@@ -389,7 +417,7 @@ bc_cx_extras = [
 
 class CategoryMap:
 
-    def __init__(self, organizer="localride", event_type="Road", ):
+    def __init__(self, organizer="thrashers", event_type="Road", ):
 
         self.event_type = event_type
 
@@ -399,6 +427,10 @@ class CategoryMap:
                     case 'localride':
                         self.extras = pumpkin_cross_extras
                         self.map_categories = localride_spring_series_map_categories 
+                        self.event_categories = spring_series_event_categories 
+                    case 'thrashers':
+                        self.extras = thrashers_extras
+                        self.map_categories = thrashers_spring_series_map_categories 
                         self.event_categories = spring_series_event_categories 
             case 'Cyclocross':
                 match organizer:
@@ -432,7 +464,7 @@ class CategoryMap:
         if requestedCategory in self.extras:
             return False, requestedCategory
 
-        return True, self.map_categories.get(requestedCategory, "NOT FOUND")
+        return True, self.map_categories.get(requestedCategory, f"{requestedCategory} NOT FOUND")
 
 
 
@@ -443,42 +475,42 @@ class CategoryMap:
         #licenses = license_categories.get('Road', [None])
 
         licenses = license_categories.get(self.event_type, [None])
-        print('get_event_category: license: %s gender: %s age: %s' % ( licenses, gender, age), file=sys.stdout)
+        print('  get_event_category: license: %s gender: %s age: %s' % ( licenses, gender, age), file=sys.stderr)
 
         #if licenses is None:
         #    licenses = [None]
 
         allowed_categories = []
         for license in licenses:
-            print('License: %s' % license, file=sys.stdout)
+            print('License: %s' % license, file=sys.stderr)
             #for category, allowedGender, (min_age, max_age), event_category in self.event_categories:
             for event_requirements in self.event_categories:
-                #print(f"Event Requirements: {event_requirements}", file=sys.stdout)
+                print('----------------', file=sys.stderr)
+                print(f"Event Requirements: {event_requirements}", file=sys.stderr)
                 category, allowedGender, (min_age, max_age), event_category = event_requirements
-                #print(f"Category: checking {category} {allowedGender} min:{min_age} max:{max_age} {event_categories}", file=sys.stdout)
+                print(f"Category: checking {category} {allowedGender} min:{min_age} max:{max_age} {event_categories}", file=sys.stderr)
                 #if category and not license:
                 #    continue
+                if allowedGender and allowedGender != gender:
+                    #print(f"Gender {allowedGender} != {gender}", file=sys.stderr)
+                    continue
                 if category == 'ANY':
                     #allowed_categories.extend([for x in event_category if x not in allowed_categories])
                     allowed_categories.extend(x for x in event_category if x not in allowed_categories)
                     continue
                 if license and category and license != category:
-                    #print(f"Category {license} != {category}", file=sys.stdout)
-                    continue
-                if allowedGender and allowedGender != gender:
-                    #print(f"Gender {allowedGender} != {gender}", file=sys.stdout)
+                    print(f"Category {license} != {category}", file=sys.stderr)
                     continue
                 if age and min_age and int(age) < min_age:
-                    #print(f"Age age:{age} < min_age:{min_age}", file=sys.stdout)
+                    print(f"Age age:{age} < min_age:{min_age}", file=sys.stderr)
                     continue
                 if age and max_age and int(age) > max_age:
-                    #print(f"Age age:{age} > max_age:{max_age}", file=sys.stdout)
+                    print(f"Age age:{age} > max_age:{max_age}", file=sys.stderr)
                     continue
-                #print(f"Category: extending {event_category}", file=sys.stdout)
+                print(f"Category: extending {event_category}", file=sys.stderr)
                 if event_category:
                     #allowed_categories.extend(for x in event_category if x not in allowed_categories)
                     allowed_categories.extend(x for x in event_category if x not in allowed_categories)
 
-        print(f"Allowed Categories: {allowed_categories}", file=sys.stdout)
         return allowed_categories, {self.event_type: licenses}
 

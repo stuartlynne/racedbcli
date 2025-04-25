@@ -25,6 +25,13 @@ BikeReg_Aliases = {
     "imlach, brittany, 1989-03-07": ('imlach', 'brittany georgia', '1989-03-07', '00000000000'),
     "kelley, xavier, 1975-04-28": ('kelley', 'xavier', '2008-02-27', '00000000000'),
     "ramirez, marklouie, 2004-09-27": ('ramirez', 'mark louie', '2004-09-27', '00000000000'),
+    "ivany, carsten ivany, 1981-01-25": ('ivany', 'carsten', '1981-01-25', '00000000000'),
+    "hutchinson, alexander, 1993-06-20": ('hutchinson', 'alex', '1993-06-20', '00000000000'),
+    "o'mahony, david, 1981-04-15": ("o'mahony", 'dave', '1981-04-15', '00000000000'),
+    "murison, alex, 1992-02-04": ('murison', 'alexander', '1992-02-04', '00000000000'),
+    "wood, dan, 1972-10-20": ('wood', 'daniel', '1972-10-20', ''),
+
+
 }
 
 # read BikeReg CSV file
@@ -54,14 +61,15 @@ class BikeRegCSV:
         with open(self.csvFileName, 'r', encoding='utf-8-sig', newline='') as csvfile:
             self.csvreader = csv.DictReader(csvfile)
             for i, row in enumerate(self.csvreader):
-                print(f"Row[{i}] {row}") 
+                print('----------------------', file=sys.stdout)
+                print(f"Row[{i}] {row}", file=sys.stderr) 
                 dob = row['Date of Birth']
                 gender = row['Gender']
                 if gender:
                     if gender.lower() not in ['m', 'f']:
                         row['Gender'] = None
 
-                print(f"DOB: {dob} Gender: {row['Gender']}")
+                print(f"DOB: {dob} Gender: {row['Gender']}", file=sys.stderr)
                 if dob:
                     try:
                         dob = datetime.strptime(dob, '%m-%d-%Y').strftime('%Y-%m-%d')
@@ -70,13 +78,13 @@ class BikeRegCSV:
 
                 row['Date of Birth'] = dob
                 lookup = f"{row['Last Name']}, {row['First Name']}, {dob}".lower()
-                print(f"Lookup: {lookup}")
+                print(f"Registrant[{i}]: {lookup} ", file=sys.stdout)
                 if lookup in BikeReg_Aliases:
                     last_name, first_name, dob, uci_id = BikeReg_Aliases[lookup]
                     row['Last Name'] = last_name
                     row['First Name'] = first_name
                     row['Date of Birth'] = dob
-                    print(f"Alias found[{lookup}]: {last_name}, {first_name}, {dob}")
+                    print(f"  Alias to: [{lookup}]: {last_name}, {first_name}, {dob}", file=sys.stdout)
                 yield i, row
     
 

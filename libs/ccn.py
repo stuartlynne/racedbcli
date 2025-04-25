@@ -18,7 +18,7 @@ class GetCCN:
 
     # name of cache file for cycling bc membership data from CCN
     def dataname(self, first_name, last_name, ):
-      return f'.data/{last_name}_{first_name}.json'.lower().replace(' ', '_')
+      return f'.data/{last_name}_{first_name}.json'.lower().replace(' ', '_').replace("'", "")
 
     # Function to fetch membership data from the API
     # If we have a cached copy, return that.

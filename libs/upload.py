@@ -3,15 +3,16 @@ import sys
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
+from libs.lib import yprint, gprint
 
 def upload_file(racedb, next_path, data=None, files=None, tableCheck=False, preCheck=False, ):
 
     # 1. GET the upload form page
     upload_form_url = f"{racedb.base_url.rstrip('/')}/{next_path.lstrip('/')}"
-    print(f"=== GET to upload form page: {upload_form_url}", file=sys.stdout)
+    gprint(f"=== GET to upload form page: {upload_form_url}", file=sys.stdout)
     r_get_upload = racedb.session.get(upload_form_url)
     if r_get_upload.status_code != 200:
-        print("Could not load upload form page successfully.", file=sys.stdout)
+        yprint("Could not load upload form page successfully.", file=sys.stdout)
         print(r_get_upload.text, file=sys.stdout)
         return
 
@@ -19,14 +20,14 @@ def upload_file(racedb, next_path, data=None, files=None, tableCheck=False, preC
     soup_upload = BeautifulSoup(r_get_upload.text, "html.parser")
     csrf_input_upload = soup_upload.find("input", {"name": "csrfmiddlewaretoken"})
     if not csrf_input_upload:
-        print("Could not find 'csrfmiddlewaretoken' in the upload form.", file=sys.stdout)
+        yprint("Could not find 'csrfmiddlewaretoken' in the upload form.", file=sys.stdout)
         return
     csrf_token = csrf_input_upload.get("value")
 
     # 3. Find the <form> and get its action attribute
     upload_form = soup_upload.find("form")
     if not upload_form:
-        print("Could not find <form> element on the upload page.", file=sys.stdout)
+        yprint("Could not find <form> element on the upload page.", file=sys.stdout)
         return
 
     action_attr = upload_form.get("action", "").strip()
@@ -36,7 +37,7 @@ def upload_file(racedb, next_path, data=None, files=None, tableCheck=False, preC
     else:
         upload_action_url = upload_form_url
 
-    print(f"Upload form action: {upload_action_url}", file=sys.stdout)
+    gprint(f"Upload form action: {upload_action_url}", file=sys.stdout)
 
     # 4. Prepare the form data
     #
@@ -65,7 +66,7 @@ def upload_file(racedb, next_path, data=None, files=None, tableCheck=False, preC
     #files = { filetype: open(file_path, "rb") }
     headers_upload = {"Referer": upload_form_url}
 
-    print(f"=== POST file to: {upload_action_url} data: {data}", file=sys.stdout)
+    gprint(f"=== POST file to: {upload_action_url} data: {data}", file=sys.stdout)
     r_post_upload = racedb.session.post(
         upload_action_url,
         data=data,
@@ -74,7 +75,7 @@ def upload_file(racedb, next_path, data=None, files=None, tableCheck=False, preC
     )
 
     if r_post_upload.status_code not in (200, 201, 302):
-        print("File upload may have failed.", file=sys.stdout)
+        yprint("File upload may have failed.", file=sys.stdout)
         print(r_post_upload.text, file=sys.stdout)
         return
 
@@ -88,17 +89,23 @@ def upload_file(racedb, next_path, data=None, files=None, tableCheck=False, preC
             "class": "table table-hover table-sm table-condensed"
         })
         if table:
-            print("=== Upload Result Table ===", file=sys.stdout)
+            gprint("=== Upload Result Table ===", file=sys.stdout)
             print_table_as_text(table)
             return
         preCheck = True
     if preCheck:
         pre_block = soup_response.find("pre")
         if pre_block:
-            print("=== Upload Summary ===", file=sys.stdout)
-            print(pre_block.get_text(strip=True), file=sys.stdout)
+            gprint("=== Upload Summary ===", file=sys.stdout)
+            #print(pre_block.get_text(strip=True), file=sys.stdout)
+            lines = pre_block.get_text(strip=True).split("\n")
+            for line in lines:
+                if line.startswith("* Row"):
+                    print(line, file=sys.stdout)
+                else:
+                    yprint(line, file=sys.stdout)
         else:
-            print("No <pre> block found in response page.", file=sys.stdout)
+            yprint("No <pre> block found in response page.", file=sys.stdout)
             print(r_post_upload.text, file=sys.stdout)
             return
 

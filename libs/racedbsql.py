@@ -58,7 +58,7 @@ class RaceDBSQL:
         self.debug = False
 
     def log_debug(self, message):
-        print(message, file=sys.stdout)
+        print(message, file=sys.stderr)
 
     def log_sql(self, query, params, debug=True):
         """Logs the fully expanded SQL query with parameters."""
@@ -90,22 +90,28 @@ class RaceDBSQL:
             print(f"Database error: {error}", file=sys.stdout)
         return None
 
-    def find_name_dob(self, first_name=None, last_name=None, dob=None):
+    def find_teams(self, first_name, last_name, license_code):
+        print(f"find_teams: {first_name} {last_name} {license_code}", file=sys.stdout)
         try:
-            # Connect to PostgreSQL database
-            #conn, cur = connect_db(host)
-            uci_id_query = """
-                SELECT id, last_name, first_name, license_code, date_of_birth, gender, uci_id FROM core_licenseholder 
-                WHERE LOWER(first_name) = LOWER(%s) AND LOWER(last_name) = LOWER(%s) and date_of_birth = %s;
+            #SELECT lh.id, lh.last_name, lh.first_name, d.name AS discipline, t.name AS team
+            query = """
+                SELECT d.name AS discipline, t.name AS team
+                FROM core_licenseholder lh
+                LEFT JOIN core_teamhint th ON lh.id = th.license_holder_id
+                LEFT JOIN core_discipline d ON th.discipline_id = d.id
+                LEFT JOIN core_team t ON th.team_id = t.id
+                WHERE lh.last_name ILIKE %s AND lh.first_name ILIKE %s and lh.license_code ILIKE %s;
             """
-            self.cur_execute(f'Find licenseholder by names {last_name}, {first_name} {dob}', uci_id_query, (first_name, last_name, dob), debug=self.debug)
-            licenseholders = self.cur.fetchmany()
-            #print(f"License Holders found: {licenseholders}", file=sys.stdout)
-            return licenseholders
             
+            self.cur_execute(f"Find disciplines/teams for {last_name}, {first_name}", query, (last_name, first_name, license_code), debug=self.debug)
+            results = self.cur.fetchall()
+            
+            return results
+
         except psycopg2.DatabaseError as error:
             print(f"Database error: {error}", file=sys.stdout)
         return None
+
 
     def find_jan01(self, first_name=None, last_name=None):
         try:
@@ -128,13 +134,30 @@ class RaceDBSQL:
             uci_id_query = "SELECT id, last_name, first_name, license_code, date_of_birth, gender, uci_id FROM core_licenseholder WHERE LOWER(first_name) = LOWER(%s) AND LOWER(last_name) = LOWER(%s);"
             self.cur_execute(f'Find licenseholder by names {last_name}, {first_name}', uci_id_query, (first_name, last_name,), debug=self.debug)
             licenseholders = self.cur.fetchmany()
-            #print(f"License Holders found: {licenseholders}", file=sys.stdout)
+            print(f"find_name: License Holders found: {licenseholders}", file=sys.stderr)
             return licenseholders
             
         except psycopg2.DatabaseError as error:
             print(f"Database error: {error}", file=sys.stdout)
         return None
  
+    def find_name_dob(self, first_name=None, last_name=None, dob=None):
+        try:
+            # Connect to PostgreSQL database
+            #conn, cur = connect_db(host)
+            uci_id_query = """
+                SELECT id, last_name, first_name, license_code, date_of_birth, gender, uci_id FROM core_licenseholder 
+                WHERE LOWER(first_name) = LOWER(%s) AND LOWER(last_name) = LOWER(%s) and date_of_birth = %s;
+            """
+            self.cur_execute(f'Find licenseholder by names {last_name}, {first_name} {dob}', uci_id_query, (first_name, last_name, dob), debug=self.debug)
+            licenseholders = self.cur.fetchmany()
+            print(f"find_name_dob: License Holders found: {licenseholders}", file=sys.stderr)
+            return licenseholders
+            
+        except psycopg2.DatabaseError as error:
+            print(f"Database error: {error}", file=sys.stdout)
+        return None
+
 
     def find_competition(self, name=None, date=None):
         print(f"find_competition: {name} {date}", file=sys.stdout)

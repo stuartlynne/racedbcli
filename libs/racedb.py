@@ -6,6 +6,7 @@ import io
 import json
 import pandas as pd
 from libs.login import session_login
+from libs.lib import yprint
 import xlsxwriter
 from libs.createxlsx import create_xlsx_file
 from bs4 import BeautifulSoup
@@ -27,6 +28,8 @@ class RaceDB:
                             "DOB": 20, 
                             "Gender": 4, 
                             "Team": 20, 
+                            "Road Team": 20, 
+                            "Cyclocross Team": 20, 
                             "Note": 40, 
                             "Comments": 20
                             }
@@ -56,12 +59,16 @@ class RaceDB:
         self.session = session_login(self.base_url, self.username, self.password)
 
 
+
     def add_purchase(self, first_name=None, last_name=None, purchase=None):
         lastfirst = (last_name, first_name)
         if lastfirst not in self.purchases:
             self.purchases[lastfirst] = []
         self.purchases[lastfirst].append(purchase)
-        print(f"Adding purchase for {first_name} {last_name}: {self.purchases[lastfirst]}", file=sys.stdout)
+        print(f"  Adding purchase for {first_name} {last_name}: {self.purchases[lastfirst]}", file=sys.stdout)
+    def get_purchases(self, first_name=None, last_name=None):
+        lastfirst = (last_name, first_name)
+        return self.purchases.get(lastfirst, [])
 
     def append_license_holders_data(self, first_name=None, last_name=None, uci_id=None, license_number=None, 
                                     license_check=False, team=None, dob=None, gender='M', note=None, comments=None):
@@ -74,21 +81,23 @@ class RaceDB:
             'DOB': dob,
             'Gender': gender,
             'Team': team,
+            'Road Team': team,
+            'Cyclocross Team': team,
             'Note': note,
             'Comments': comments,
         })
+        print('License holder data: ', self.license_holder_data[-1], file=sys.stderr)
 
     # create new license holder, DoB jan 1, Year based on age from CCN, gender male
     #def new_license_holder(self, first_name, last_name, uci_id, license_number, team):
-    def new_license_holder(self, first_name=None, last_name=None, uci_id=None, dob=None, gender=None, age=25,):
-        print(f"No license holder found for {first_name} {last_name}.", file=sys.stdout)
-        license_number = team = None
+    def new_license_holder(self, first_name=None, last_name=None, uci_id=None, dob=None, gender=None, age=25, license_number=None, team=None, msg=None):
+        yprint(f"  RaceDB: will add {first_name} {last_name} {dob} - {msg}", file=sys.stdout)
         #if person:
         #    license_number = person["license_number"]
         #    team = person["team"]
         fixflag = False
         if not dob:
-            dob = f"01-01-{2025 - age}"
+            dob = f"{2025 - age}-01-01"
         if not gender:
             gender = "M"
         self.append_license_holders_data(first_name=first_name, last_name=last_name, uci_id=uci_id, 
@@ -97,7 +106,7 @@ class RaceDB:
 
     # update license holder with new data based on last, first names and DoB
     def update_license_holder(self, first_name=None, last_name=None, dob=None, gender=None, uci_id=None, license_number=None, team=None, msg=None):
-        print(f"Updating license holder for {first_name} {last_name}.", file=sys.stdout)
+        yprint(f"  Racedb: will update {first_name} {last_name} {uci_id} {license_number} - {msg}", file=sys.stdout)
         self.append_license_holders_data(first_name=first_name, last_name=last_name, uci_id=uci_id, 
                          license_number=license_number, team=team, dob=dob, gender=gender, comments=f"Update {msg}")
 
@@ -114,7 +123,7 @@ class RaceDB:
 
     def upload_license_holders(self,):
 
-        print('License holder data:', self.license_holder_data, file=sys.stdout)
+        print('License holder data:', self.license_holder_data, file=sys.stderr)
         if True:
             xlsx_file = self.create_license_holders_xlsx_file(self.license_holder_data, file_path="license_holders.xlsx")
 
@@ -133,7 +142,7 @@ class RaceDB:
             },)
 
     def add_registration(self, first_name=None, last_name=None, uci_id=None, license_number=None, license_check=False, 
-                         gender=None, license_type=None, category=None, note=None, ):
+                         gender=None, license_type=None, category=None, note=None, allowed=False):
         self.registration_data.append({
             'First Name': first_name,
             'Last Name': last_name,
@@ -146,7 +155,16 @@ class RaceDB:
             'Note': note,
             'Category': category,
         })
-        print('Registration data: ', self.registration_data[-1], file=sys.stdout)
+        if allowed:
+            print('  Registration data: %s' % (
+                [self.registration_data[-1][k] for k in ['First Name', 'Last Name', 'License', 'License Check', 
+                 'UCI ID', 'Category', 'Note']]), 
+                  file=sys.stdout)
+        else:
+            yprint('  Registration data: %s' % (
+                [self.registration_data[-1][k] for k in ['First Name', 'Last Name', 'License', 'License Check', 
+                 'UCI ID', 'Category', 'Note']]), 
+                  file=sys.stdout)
         pass
 
     def create_registrations_xlsx_file(self, data, file_path=None):
@@ -160,7 +178,7 @@ class RaceDB:
         output.seek(0)
         return output
 
-    def upload_registrations(self, competition_id=None, upload=False):
+    def upload_registrations(self, competition_id=None, upload=False, bibs=False):
 
         if True:
             xlsx_file = self.create_registrations_xlsx_file(self.registration_data, file_path="registrations.xlsx")
@@ -173,6 +191,7 @@ class RaceDB:
         self.upload_file(next_path, tableCheck=True, 
             files={'excel_file': ('license_holders.xlsx', xlsx_file, )},
             data={
+                "assign_missing_bibs": "on" if bibs else "off",
                 "clear_existing": "on",
                 "ok-submit": "OK",
             },)
