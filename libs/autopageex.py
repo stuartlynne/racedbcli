@@ -32,9 +32,9 @@ class AutoPagerEx(autopage.AutoPager):
         return stdout, sys.stderr if self.stderr else stdout if self.stderrdup else open(os.devnull, 'w')
 
     def __exit__(self, exc_type, exc_value, traceback):
-        print(f'AutoPagerEx.__exit__ exc_type: {exc_type} exc_value: {exc_value}', file=sys.stderr)
-        print(f"AutoPagerEx.__exit__ _exit_code: {self._exit_code}", file=sys.stderr)
-        print(f"traceback: {traceback}", file=sys.stderr)
+        #print(f'AutoPagerEx.__exit__ exc_type: {exc_type} exc_value: {exc_value}', file=sys.stderr)
+        #print(f"AutoPagerEx.__exit__ _exit_code: {self._exit_code}", file=sys.stderr)
+        #print(f"traceback: {traceback}", file=sys.stderr)
         super(AutoPagerEx, self).__exit__(exc_type, exc_value, traceback)
         if self.fixLess:
             os.environ['LESS'] = self.less
