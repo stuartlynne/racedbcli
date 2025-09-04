@@ -80,7 +80,7 @@ def write_merged_catmap(format_name: str, labels: list[str], allowed_codes: set[
     for lbl in labels:
         cat, gen = extract_category_gender(lbl)
         if allowed_codes is not None and cat not in allowed_codes:
-            cat = f"{cat} FIX"
+            cat = f"FIX {cat}"
         proposed[lbl] = [cat, gen]
 
     # Merge labels (preserve existing values)
@@ -215,7 +215,7 @@ def main():
         for label in labels:
             cat, gen = extract_category_gender(label)
             if allowed_codes is not None and cat not in allowed_codes:
-                cat = f"{cat} FIX"
+                cat = f"FIX {cat}"
             mapping[label] = [cat, gen]
         json.dump(mapping, sys.stdout, ensure_ascii=False, indent=2)
         print()
