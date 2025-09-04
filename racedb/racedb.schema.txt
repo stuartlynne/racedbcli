@@ -1,0 +1,624 @@
+Table: auth_group
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: name, Type: character varying, Nullable: NO, Default: None
+
+Table: auth_group_permissions
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: group_id, Type: integer, Nullable: NO, Default: None
+  Column: permission_id, Type: integer, Nullable: NO, Default: None
+
+Table: auth_permission
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: name, Type: character varying, Nullable: NO, Default: None
+  Column: content_type_id, Type: integer, Nullable: NO, Default: None
+  Column: codename, Type: character varying, Nullable: NO, Default: None
+
+Table: auth_user
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: password, Type: character varying, Nullable: NO, Default: None
+  Column: last_login, Type: timestamp with time zone, Nullable: YES, Default: None
+  Column: is_superuser, Type: boolean, Nullable: NO, Default: None
+  Column: username, Type: character varying, Nullable: NO, Default: None
+  Column: first_name, Type: character varying, Nullable: NO, Default: None
+  Column: last_name, Type: character varying, Nullable: NO, Default: None
+  Column: email, Type: character varying, Nullable: NO, Default: None
+  Column: is_staff, Type: boolean, Nullable: NO, Default: None
+  Column: is_active, Type: boolean, Nullable: NO, Default: None
+  Column: date_joined, Type: timestamp with time zone, Nullable: NO, Default: None
+
+Table: auth_user_groups
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: user_id, Type: integer, Nullable: NO, Default: None
+  Column: group_id, Type: integer, Nullable: NO, Default: None
+
+Table: auth_user_user_permissions
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: user_id, Type: integer, Nullable: NO, Default: None
+  Column: permission_id, Type: integer, Nullable: NO, Default: None
+
+Table: core_category
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: code, Type: character varying, Nullable: NO, Default: None
+  Column: gender, Type: smallint, Nullable: NO, Default: None
+  Column: description, Type: character varying, Nullable: NO, Default: None
+  Column: sequence, Type: smallint, Nullable: NO, Default: None
+  Column: format_id, Type: integer, Nullable: NO, Default: None
+
+Table: core_categoryformat
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: name, Type: character varying, Nullable: NO, Default: None
+  Column: description, Type: character varying, Nullable: NO, Default: None
+
+Table: core_categorygroup
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: sequence, Type: smallint, Nullable: NO, Default: None
+  Column: name, Type: character varying, Nullable: NO, Default: None
+  Column: series_id, Type: integer, Nullable: NO, Default: None
+
+Table: core_categorygroupelement
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: category_id, Type: integer, Nullable: NO, Default: None
+  Column: category_group_id, Type: integer, Nullable: NO, Default: None
+
+Table: core_categoryhint
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: effective_date, Type: date, Nullable: NO, Default: None
+  Column: category_id, Type: integer, Nullable: NO, Default: None
+  Column: discipline_id, Type: integer, Nullable: NO, Default: None
+  Column: license_holder_id, Type: integer, Nullable: NO, Default: None
+
+Table: core_categorynumbers
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: range_str, Type: text, Nullable: NO, Default: None
+  Column: competition_id, Type: integer, Nullable: NO, Default: None
+
+Table: core_categorynumbers_categories
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: categorynumbers_id, Type: integer, Nullable: NO, Default: None
+  Column: category_id, Type: integer, Nullable: NO, Default: None
+
+Table: core_competition
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: name, Type: character varying, Nullable: NO, Default: None
+  Column: long_name, Type: character varying, Nullable: NO, Default: None
+  Column: description, Type: character varying, Nullable: NO, Default: None
+  Column: city, Type: character varying, Nullable: NO, Default: None
+  Column: stateProv, Type: character varying, Nullable: NO, Default: None
+  Column: country, Type: character varying, Nullable: NO, Default: None
+  Column: organizer, Type: character varying, Nullable: NO, Default: None
+  Column: organizer_contact, Type: character varying, Nullable: NO, Default: None
+  Column: organizer_email, Type: character varying, Nullable: NO, Default: None
+  Column: organizer_phone, Type: character varying, Nullable: NO, Default: None
+  Column: start_date, Type: date, Nullable: NO, Default: None
+  Column: number_of_days, Type: smallint, Nullable: NO, Default: None
+  Column: using_tags, Type: boolean, Nullable: NO, Default: None
+  Column: use_existing_tags, Type: boolean, Nullable: NO, Default: None
+  Column: do_tag_validation, Type: boolean, Nullable: NO, Default: None
+  Column: distance_unit, Type: smallint, Nullable: NO, Default: None
+  Column: ftp_host, Type: character varying, Nullable: NO, Default: None
+  Column: ftp_user, Type: character varying, Nullable: NO, Default: None
+  Column: ftp_password, Type: character varying, Nullable: NO, Default: None
+  Column: ftp_path, Type: character varying, Nullable: NO, Default: None
+  Column: ftp_upload_during_race, Type: boolean, Nullable: NO, Default: None
+  Column: show_signature, Type: boolean, Nullable: NO, Default: None
+  Column: ga_tracking_id, Type: character varying, Nullable: NO, Default: None
+  Column: recurring, Type: smallint, Nullable: NO, Default: None
+  Column: bib_label_print, Type: boolean, Nullable: NO, Default: None
+  Column: bibs_label_print, Type: boolean, Nullable: NO, Default: None
+  Column: bibs_laser_print, Type: boolean, Nullable: NO, Default: None
+  Column: shoulders_label_print, Type: boolean, Nullable: NO, Default: None
+  Column: frame_label_print, Type: boolean, Nullable: NO, Default: None
+  Column: frame_label_print_1, Type: boolean, Nullable: NO, Default: None
+  Column: license_check_note, Type: character varying, Nullable: NO, Default: None
+  Column: category_format_id, Type: integer, Nullable: NO, Default: None
+  Column: discipline_id, Type: integer, Nullable: NO, Default: None
+  Column: legal_entity_id, Type: integer, Nullable: YES, Default: None
+  Column: number_set_id, Type: integer, Nullable: YES, Default: None
+  Column: race_class_id, Type: integer, Nullable: NO, Default: None
+  Column: report_label_license_check_id, Type: integer, Nullable: YES, Default: None
+  Column: seasons_pass_id, Type: integer, Nullable: YES, Default: None
+  Column: google_maps_api_key, Type: character varying, Nullable: NO, Default: None
+  Column: use_sftp, Type: boolean, Nullable: NO, Default: None
+  Column: image_id, Type: integer, Nullable: YES, Default: None
+  Column: gpx_course_default_id, Type: integer, Nullable: YES, Default: None
+
+Table: core_competition_report_labels
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: competition_id, Type: integer, Nullable: NO, Default: None
+  Column: reportlabel_id, Type: integer, Nullable: NO, Default: None
+
+Table: core_competitioncategoryoption
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: license_check_required, Type: boolean, Nullable: NO, Default: None
+  Column: note, Type: character varying, Nullable: NO, Default: None
+  Column: category_id, Type: integer, Nullable: NO, Default: None
+  Column: competition_id, Type: integer, Nullable: NO, Default: None
+
+Table: core_crossmgrlog
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: timestamp, Type: timestamp with time zone, Nullable: NO, Default: None
+  Column: action, Type: smallint, Nullable: NO, Default: None
+  Column: user, Type: character varying, Nullable: NO, Default: None
+  Column: success, Type: boolean, Nullable: NO, Default: None
+  Column: event_mass_start_id, Type: integer, Nullable: YES, Default: None
+  Column: event_tt_id, Type: integer, Nullable: YES, Default: None
+  Column: password, Type: character varying, Nullable: NO, Default: None
+
+Table: core_crossmgrpassword
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: password, Type: character varying, Nullable: NO, Default: None
+  Column: description, Type: character varying, Nullable: NO, Default: None
+
+Table: core_customcategorymassstart
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: sequence, Type: smallint, Nullable: NO, Default: None
+  Column: name, Type: character varying, Nullable: NO, Default: None
+  Column: range_str, Type: character varying, Nullable: NO, Default: None
+  Column: nation_code_str, Type: character varying, Nullable: NO, Default: None
+  Column: gender, Type: smallint, Nullable: NO, Default: None
+  Column: license_code_prefixes, Type: character varying, Nullable: NO, Default: None
+  Column: state_prov_str, Type: character varying, Nullable: NO, Default: None
+  Column: competitive_age_minimum, Type: smallint, Nullable: YES, Default: None
+  Column: competitive_age_maximum, Type: smallint, Nullable: YES, Default: None
+  Column: date_of_birth_minimum, Type: date, Nullable: YES, Default: None
+  Column: date_of_birth_maximum, Type: date, Nullable: YES, Default: None
+  Column: event_id, Type: integer, Nullable: NO, Default: None
+  Column: in_category_id, Type: integer, Nullable: YES, Default: None
+
+Table: core_customcategorytt
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: sequence, Type: smallint, Nullable: NO, Default: None
+  Column: name, Type: character varying, Nullable: NO, Default: None
+  Column: range_str, Type: character varying, Nullable: NO, Default: None
+  Column: nation_code_str, Type: character varying, Nullable: NO, Default: None
+  Column: gender, Type: smallint, Nullable: NO, Default: None
+  Column: license_code_prefixes, Type: character varying, Nullable: NO, Default: None
+  Column: state_prov_str, Type: character varying, Nullable: NO, Default: None
+  Column: competitive_age_minimum, Type: smallint, Nullable: YES, Default: None
+  Column: competitive_age_maximum, Type: smallint, Nullable: YES, Default: None
+  Column: date_of_birth_minimum, Type: date, Nullable: YES, Default: None
+  Column: date_of_birth_maximum, Type: date, Nullable: YES, Default: None
+  Column: event_id, Type: integer, Nullable: NO, Default: None
+  Column: in_category_id, Type: integer, Nullable: YES, Default: None
+
+Table: core_discipline
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: name, Type: character varying, Nullable: NO, Default: None
+  Column: sequence, Type: smallint, Nullable: NO, Default: None
+
+Table: core_entrytt
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: est_speed, Type: double precision, Nullable: NO, Default: None
+  Column: hint_sequence, Type: integer, Nullable: NO, Default: None
+  Column: start_sequence, Type: integer, Nullable: NO, Default: None
+  Column: start_time, Type: double precision, Nullable: YES, Default: None
+  Column: finish_time, Type: double precision, Nullable: YES, Default: None
+  Column: adjustment_time, Type: double precision, Nullable: YES, Default: None
+  Column: adjustment_note, Type: character varying, Nullable: NO, Default: None
+  Column: event_id, Type: integer, Nullable: NO, Default: None
+  Column: participant_id, Type: integer, Nullable: NO, Default: None
+
+Table: core_eventmassstart
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: name, Type: character varying, Nullable: NO, Default: None
+  Column: date_time, Type: timestamp with time zone, Nullable: NO, Default: None
+  Column: event_type, Type: smallint, Nullable: NO, Default: None
+  Column: optional, Type: boolean, Nullable: NO, Default: None
+  Column: option_id, Type: integer, Nullable: NO, Default: None
+  Column: select_by_default, Type: boolean, Nullable: NO, Default: None
+  Column: rfid_option, Type: integer, Nullable: NO, Default: None
+  Column: road_race_finish_times, Type: boolean, Nullable: NO, Default: None
+  Column: note, Type: text, Nullable: YES, Default: None
+  Column: dnsNoData, Type: boolean, Nullable: NO, Default: None
+  Column: win_and_out, Type: boolean, Nullable: NO, Default: None
+  Column: competition_id, Type: integer, Nullable: NO, Default: None
+  Column: gpx_course_id, Type: integer, Nullable: YES, Default: None
+
+Table: core_eventtt
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: name, Type: character varying, Nullable: NO, Default: None
+  Column: date_time, Type: timestamp with time zone, Nullable: NO, Default: None
+  Column: event_type, Type: smallint, Nullable: NO, Default: None
+  Column: optional, Type: boolean, Nullable: NO, Default: None
+  Column: option_id, Type: integer, Nullable: NO, Default: None
+  Column: select_by_default, Type: boolean, Nullable: NO, Default: None
+  Column: rfid_option, Type: integer, Nullable: NO, Default: None
+  Column: road_race_finish_times, Type: boolean, Nullable: NO, Default: None
+  Column: note, Type: text, Nullable: YES, Default: None
+  Column: dnsNoData, Type: boolean, Nullable: NO, Default: None
+  Column: create_seeded_startlist, Type: boolean, Nullable: NO, Default: None
+  Column: group_size, Type: smallint, Nullable: NO, Default: None
+  Column: group_size_gap, Type: double precision, Nullable: NO, Default: None
+  Column: competition_id, Type: integer, Nullable: NO, Default: None
+  Column: gpx_course_id, Type: integer, Nullable: YES, Default: None
+
+Table: core_gpxcourse
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: name, Type: character varying, Nullable: NO, Default: None
+  Column: description, Type: character varying, Nullable: NO, Default: None
+  Column: lat_lon_elevation, Type: jsonb, Nullable: NO, Default: None
+  Column: is_loop, Type: boolean, Nullable: NO, Default: None
+  Column: meters, Type: double precision, Nullable: NO, Default: None
+  Column: lat_start, Type: double precision, Nullable: NO, Default: None
+  Column: lon_start, Type: double precision, Nullable: NO, Default: None
+  Column: lat_min, Type: double precision, Nullable: NO, Default: None
+  Column: lat_max, Type: double precision, Nullable: NO, Default: None
+  Column: lon_min, Type: double precision, Nullable: NO, Default: None
+  Column: lon_max, Type: double precision, Nullable: NO, Default: None
+  Column: ele_min, Type: double precision, Nullable: NO, Default: None
+  Column: ele_max, Type: double precision, Nullable: NO, Default: None
+
+Table: core_image
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: title, Type: character varying, Nullable: NO, Default: None
+  Column: description, Type: character varying, Nullable: NO, Default: None
+  Column: image, Type: character varying, Nullable: NO, Default: None
+  Column: url, Type: character varying, Nullable: NO, Default: None
+
+Table: core_legalentity
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: name, Type: character varying, Nullable: NO, Default: None
+  Column: contact, Type: character varying, Nullable: NO, Default: None
+  Column: email, Type: character varying, Nullable: NO, Default: None
+  Column: phone, Type: character varying, Nullable: NO, Default: None
+  Column: website, Type: character varying, Nullable: NO, Default: None
+  Column: waiver_expiry_date, Type: date, Nullable: NO, Default: None
+
+Table: core_licensecheckstate
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: check_date, Type: date, Nullable: NO, Default: None
+  Column: category_id, Type: integer, Nullable: NO, Default: None
+  Column: discipline_id, Type: integer, Nullable: NO, Default: None
+  Column: license_holder_id, Type: integer, Nullable: NO, Default: None
+  Column: report_label_license_check_id, Type: integer, Nullable: NO, Default: None
+
+Table: core_licenseholder
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: last_name, Type: character varying, Nullable: NO, Default: None
+  Column: first_name, Type: character varying, Nullable: NO, Default: None
+  Column: gender, Type: smallint, Nullable: NO, Default: None
+  Column: date_of_birth, Type: date, Nullable: NO, Default: None
+  Column: city, Type: character varying, Nullable: NO, Default: None
+  Column: state_prov, Type: character varying, Nullable: NO, Default: None
+  Column: nationality, Type: character varying, Nullable: NO, Default: None
+  Column: nation_code, Type: character varying, Nullable: NO, Default: None
+  Column: zip_postal, Type: character varying, Nullable: NO, Default: None
+  Column: email, Type: character varying, Nullable: NO, Default: None
+  Column: phone, Type: character varying, Nullable: NO, Default: None
+  Column: uci_code, Type: character varying, Nullable: NO, Default: None
+  Column: uci_id, Type: character varying, Nullable: NO, Default: None
+  Column: license_code, Type: character varying, Nullable: YES, Default: None
+  Column: existing_bib, Type: smallint, Nullable: YES, Default: None
+  Column: existing_tag, Type: character varying, Nullable: YES, Default: None
+  Column: existing_tag2, Type: character varying, Nullable: YES, Default: None
+  Column: suspended, Type: boolean, Nullable: NO, Default: None
+  Column: active, Type: boolean, Nullable: NO, Default: None
+  Column: search_text, Type: character varying, Nullable: NO, Default: None
+  Column: eligible, Type: boolean, Nullable: NO, Default: None
+  Column: note, Type: text, Nullable: YES, Default: None
+  Column: ineligible_on_date_time, Type: timestamp with time zone, Nullable: YES, Default: None
+  Column: emergency_contact_name, Type: character varying, Nullable: NO, Default: None
+  Column: emergency_contact_phone, Type: character varying, Nullable: NO, Default: None
+  Column: emergency_medical, Type: character varying, Nullable: NO, Default: None
+
+Table: core_numberset
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: name, Type: character varying, Nullable: NO, Default: None
+  Column: sequence, Type: smallint, Nullable: NO, Default: None
+  Column: range_str, Type: text, Nullable: NO, Default: None
+  Column: sponsor, Type: character varying, Nullable: NO, Default: None
+  Column: description, Type: character varying, Nullable: NO, Default: None
+
+Table: core_numbersetentry
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: bib, Type: smallint, Nullable: NO, Default: None
+  Column: date_issued, Type: date, Nullable: YES, Default: None
+  Column: date_lost, Type: date, Nullable: YES, Default: None
+  Column: license_holder_id, Type: integer, Nullable: NO, Default: None
+  Column: number_set_id, Type: integer, Nullable: NO, Default: None
+
+Table: core_participant
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: role, Type: smallint, Nullable: NO, Default: None
+  Column: preregistered, Type: boolean, Nullable: NO, Default: None
+  Column: registration_timestamp, Type: timestamp with time zone, Nullable: NO, Default: None
+  Column: bib, Type: integer, Nullable: YES, Default: None
+  Column: tag, Type: character varying, Nullable: YES, Default: None
+  Column: tag2, Type: character varying, Nullable: YES, Default: None
+  Column: tag_checked, Type: boolean, Nullable: NO, Default: None
+  Column: license_checked, Type: boolean, Nullable: NO, Default: None
+  Column: signature, Type: text, Nullable: NO, Default: None
+  Column: paid, Type: boolean, Nullable: NO, Default: None
+  Column: confirmed, Type: boolean, Nullable: NO, Default: None
+  Column: note, Type: text, Nullable: NO, Default: None
+  Column: est_kmh, Type: double precision, Nullable: NO, Default: None
+  Column: seed_early, Type: boolean, Nullable: NO, Default: None
+  Column: seed_option, Type: smallint, Nullable: NO, Default: None
+  Column: category_id, Type: integer, Nullable: YES, Default: None
+  Column: competition_id, Type: integer, Nullable: NO, Default: None
+  Column: license_holder_id, Type: integer, Nullable: NO, Default: None
+  Column: team_id, Type: integer, Nullable: YES, Default: None
+
+Table: core_participantoption
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: option_id, Type: integer, Nullable: NO, Default: None
+  Column: competition_id, Type: integer, Nullable: NO, Default: None
+  Column: participant_id, Type: integer, Nullable: NO, Default: None
+
+Table: core_primemassstart
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: effort, Type: smallint, Nullable: NO, Default: None
+  Column: effort_custom, Type: character varying, Nullable: NO, Default: None
+  Column: position, Type: smallint, Nullable: YES, Default: None
+  Column: laps_to_go, Type: smallint, Nullable: YES, Default: None
+  Column: sponsor, Type: character varying, Nullable: NO, Default: None
+  Column: cash, Type: double precision, Nullable: YES, Default: None
+  Column: merchandise, Type: character varying, Nullable: NO, Default: None
+  Column: points, Type: smallint, Nullable: YES, Default: None
+  Column: time_bonus, Type: double precision, Nullable: YES, Default: None
+  Column: event_id, Type: integer, Nullable: NO, Default: None
+  Column: participant_id, Type: integer, Nullable: NO, Default: None
+
+Table: core_primett
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: effort, Type: smallint, Nullable: NO, Default: None
+  Column: effort_custom, Type: character varying, Nullable: NO, Default: None
+  Column: position, Type: smallint, Nullable: YES, Default: None
+  Column: laps_to_go, Type: smallint, Nullable: YES, Default: None
+  Column: sponsor, Type: character varying, Nullable: NO, Default: None
+  Column: cash, Type: double precision, Nullable: YES, Default: None
+  Column: merchandise, Type: character varying, Nullable: NO, Default: None
+  Column: points, Type: smallint, Nullable: YES, Default: None
+  Column: time_bonus, Type: double precision, Nullable: YES, Default: None
+  Column: event_id, Type: integer, Nullable: NO, Default: None
+  Column: participant_id, Type: integer, Nullable: NO, Default: None
+
+Table: core_raceclass
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: name, Type: character varying, Nullable: NO, Default: None
+  Column: sequence, Type: smallint, Nullable: NO, Default: None
+
+Table: core_racetimemassstart
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: race_time, Type: double precision, Nullable: NO, Default: None
+  Column: lap_kmh, Type: double precision, Nullable: NO, Default: None
+  Column: result_id, Type: integer, Nullable: NO, Default: None
+
+Table: core_racetimett
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: race_time, Type: double precision, Nullable: NO, Default: None
+  Column: lap_kmh, Type: double precision, Nullable: NO, Default: None
+  Column: result_id, Type: integer, Nullable: NO, Default: None
+
+Table: core_reportlabel
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: name, Type: character varying, Nullable: NO, Default: None
+  Column: sequence, Type: smallint, Nullable: NO, Default: None
+
+Table: core_resultmassstart
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: status, Type: smallint, Nullable: NO, Default: None
+  Column: category_rank, Type: smallint, Nullable: NO, Default: None
+  Column: category_starters, Type: smallint, Nullable: NO, Default: None
+  Column: category_gap, Type: character varying, Nullable: NO, Default: None
+  Column: wave_rank, Type: smallint, Nullable: NO, Default: None
+  Column: wave_starters, Type: smallint, Nullable: NO, Default: None
+  Column: wave_gap, Type: character varying, Nullable: NO, Default: None
+  Column: finish_time, Type: double precision, Nullable: YES, Default: None
+  Column: adjustment_time, Type: double precision, Nullable: YES, Default: None
+  Column: adjustment_note, Type: character varying, Nullable: NO, Default: None
+  Column: ave_kmh, Type: double precision, Nullable: YES, Default: None
+  Column: points, Type: smallint, Nullable: NO, Default: None
+  Column: time_bonus, Type: double precision, Nullable: YES, Default: None
+  Column: relegated, Type: boolean, Nullable: NO, Default: None
+  Column: event_id, Type: integer, Nullable: NO, Default: None
+  Column: participant_id, Type: integer, Nullable: NO, Default: None
+
+Table: core_resulttt
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: status, Type: smallint, Nullable: NO, Default: None
+  Column: category_rank, Type: smallint, Nullable: NO, Default: None
+  Column: category_starters, Type: smallint, Nullable: NO, Default: None
+  Column: category_gap, Type: character varying, Nullable: NO, Default: None
+  Column: wave_rank, Type: smallint, Nullable: NO, Default: None
+  Column: wave_starters, Type: smallint, Nullable: NO, Default: None
+  Column: wave_gap, Type: character varying, Nullable: NO, Default: None
+  Column: finish_time, Type: double precision, Nullable: YES, Default: None
+  Column: adjustment_time, Type: double precision, Nullable: YES, Default: None
+  Column: adjustment_note, Type: character varying, Nullable: NO, Default: None
+  Column: ave_kmh, Type: double precision, Nullable: YES, Default: None
+  Column: points, Type: smallint, Nullable: NO, Default: None
+  Column: time_bonus, Type: double precision, Nullable: YES, Default: None
+  Column: relegated, Type: boolean, Nullable: NO, Default: None
+  Column: event_id, Type: integer, Nullable: NO, Default: None
+  Column: participant_id, Type: integer, Nullable: NO, Default: None
+
+Table: core_seasonspass
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: name, Type: character varying, Nullable: NO, Default: None
+  Column: sequence, Type: smallint, Nullable: NO, Default: None
+
+Table: core_seasonspassholder
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: license_holder_id, Type: integer, Nullable: NO, Default: None
+  Column: seasons_pass_id, Type: integer, Nullable: NO, Default: None
+
+Table: core_series
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: sequence, Type: smallint, Nullable: NO, Default: None
+  Column: name, Type: character varying, Nullable: NO, Default: None
+  Column: description, Type: character varying, Nullable: NO, Default: None
+  Column: ranking_criteria, Type: smallint, Nullable: NO, Default: None
+  Column: show_last_to_first, Type: boolean, Nullable: NO, Default: None
+  Column: tie_breaking_rule, Type: smallint, Nullable: NO, Default: None
+  Column: consider_most_events_completed, Type: boolean, Nullable: NO, Default: None
+  Column: consider_primes, Type: boolean, Nullable: NO, Default: None
+  Column: best_results_to_consider, Type: smallint, Nullable: NO, Default: None
+  Column: must_have_completed, Type: smallint, Nullable: NO, Default: None
+  Column: callup_max, Type: smallint, Nullable: NO, Default: None
+  Column: randomize_if_no_results, Type: boolean, Nullable: NO, Default: None
+  Column: category_format_id, Type: integer, Nullable: NO, Default: None
+  Column: custom_category_names, Type: text, Nullable: NO, Default: None
+  Column: image_id, Type: integer, Nullable: YES, Default: None
+
+Table: core_seriescompetitionevent
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: event_mass_start_id, Type: integer, Nullable: YES, Default: None
+  Column: event_tt_id, Type: integer, Nullable: YES, Default: None
+  Column: points_structure_id, Type: integer, Nullable: YES, Default: None
+  Column: series_id, Type: integer, Nullable: NO, Default: None
+
+Table: core_seriesincludecategory
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: category_id, Type: integer, Nullable: NO, Default: None
+  Column: series_id, Type: integer, Nullable: NO, Default: None
+
+Table: core_seriespointsstructure
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: sequence, Type: smallint, Nullable: NO, Default: None
+  Column: name, Type: character varying, Nullable: NO, Default: None
+  Column: points_for_place, Type: character varying, Nullable: NO, Default: None
+  Column: finish_points, Type: smallint, Nullable: NO, Default: None
+  Column: dnf_points, Type: smallint, Nullable: NO, Default: None
+  Column: dns_points, Type: smallint, Nullable: NO, Default: None
+  Column: series_id, Type: integer, Nullable: NO, Default: None
+
+Table: core_seriesupgradecategory
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: sequence, Type: smallint, Nullable: NO, Default: None
+  Column: category_id, Type: integer, Nullable: NO, Default: None
+  Column: upgrade_progression_id, Type: integer, Nullable: NO, Default: None
+
+Table: core_seriesupgradeprogression
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: sequence, Type: smallint, Nullable: NO, Default: None
+  Column: factor, Type: double precision, Nullable: NO, Default: None
+  Column: series_id, Type: integer, Nullable: NO, Default: None
+
+Table: core_systeminfo
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: tag_creation, Type: smallint, Nullable: NO, Default: None
+  Column: tag_bits, Type: smallint, Nullable: NO, Default: None
+  Column: tag_template, Type: character varying, Nullable: NO, Default: None
+  Column: tag_from_license, Type: boolean, Nullable: NO, Default: None
+  Column: tag_from_license_id, Type: smallint, Nullable: NO, Default: None
+  Column: tag_all_hex, Type: boolean, Nullable: NO, Default: None
+  Column: rfid_server_host, Type: character varying, Nullable: NO, Default: None
+  Column: rfid_server_port, Type: integer, Nullable: NO, Default: None
+  Column: reg_closure_minutes, Type: integer, Nullable: NO, Default: None
+  Column: exclude_empty_categories, Type: boolean, Nullable: NO, Default: None
+  Column: reg_allow_add_multiple_categories, Type: boolean, Nullable: NO, Default: None
+  Column: license_code_regex, Type: character varying, Nullable: NO, Default: None
+  Column: print_tag_option, Type: smallint, Nullable: NO, Default: None
+  Column: server_print_tag_cmd, Type: character varying, Nullable: NO, Default: None
+  Column: cloud_server_url, Type: character varying, Nullable: NO, Default: None
+  Column: license_holder_unique_by_license_code, Type: boolean, Nullable: NO, Default: None
+  Column: date_Md, Type: character varying, Nullable: NO, Default: None
+  Column: date_short, Type: character varying, Nullable: NO, Default: None
+  Column: time_hhmmss, Type: character varying, Nullable: NO, Default: None
+
+Table: core_team
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: name, Type: character varying, Nullable: NO, Default: None
+  Column: team_code, Type: character varying, Nullable: NO, Default: None
+  Column: team_type, Type: smallint, Nullable: NO, Default: None
+  Column: nation_code, Type: character varying, Nullable: NO, Default: None
+  Column: active, Type: boolean, Nullable: NO, Default: None
+  Column: search_text, Type: character varying, Nullable: NO, Default: None
+  Column: contact, Type: character varying, Nullable: NO, Default: None
+  Column: contact_email, Type: character varying, Nullable: NO, Default: None
+  Column: contact_phone, Type: character varying, Nullable: NO, Default: None
+  Column: was_team_id, Type: integer, Nullable: YES, Default: None
+
+Table: core_teamalias
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: alias, Type: character varying, Nullable: NO, Default: None
+  Column: team_id, Type: integer, Nullable: NO, Default: None
+
+Table: core_teamhint
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: effective_date, Type: date, Nullable: NO, Default: None
+  Column: discipline_id, Type: integer, Nullable: NO, Default: None
+  Column: license_holder_id, Type: integer, Nullable: NO, Default: None
+  Column: team_id, Type: integer, Nullable: YES, Default: None
+
+Table: core_updatelog
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: created, Type: timestamp with time zone, Nullable: NO, Default: None
+  Column: update_type, Type: smallint, Nullable: NO, Default: None
+  Column: description, Type: text, Nullable: NO, Default: None
+
+Table: core_waiver
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: date_signed, Type: date, Nullable: YES, Default: None
+  Column: legal_entity_id, Type: integer, Nullable: NO, Default: None
+  Column: license_holder_id, Type: integer, Nullable: NO, Default: None
+
+Table: core_wave
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: name, Type: character varying, Nullable: NO, Default: None
+  Column: distance, Type: double precision, Nullable: YES, Default: None
+  Column: laps, Type: smallint, Nullable: YES, Default: None
+  Column: max_participants, Type: integer, Nullable: YES, Default: None
+  Column: rank_categories_together, Type: boolean, Nullable: NO, Default: None
+  Column: start_offset, Type: double precision, Nullable: YES, Default: None
+  Column: minutes, Type: smallint, Nullable: YES, Default: None
+  Column: event_id, Type: integer, Nullable: NO, Default: None
+
+Table: core_wave_categories
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: wave_id, Type: integer, Nullable: NO, Default: None
+  Column: category_id, Type: integer, Nullable: NO, Default: None
+
+Table: core_wavecallup
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: order, Type: smallint, Nullable: NO, Default: None
+  Column: participant_id, Type: integer, Nullable: NO, Default: None
+  Column: wave_id, Type: integer, Nullable: NO, Default: None
+
+Table: core_wavett
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: name, Type: character varying, Nullable: NO, Default: None
+  Column: distance, Type: double precision, Nullable: YES, Default: None
+  Column: laps, Type: smallint, Nullable: YES, Default: None
+  Column: max_participants, Type: integer, Nullable: YES, Default: None
+  Column: rank_categories_together, Type: boolean, Nullable: NO, Default: None
+  Column: sequence, Type: smallint, Nullable: NO, Default: None
+  Column: gap_before_wave, Type: double precision, Nullable: YES, Default: None
+  Column: regular_start_gap, Type: double precision, Nullable: YES, Default: None
+  Column: fastest_participants_start_gap, Type: double precision, Nullable: YES, Default: None
+  Column: num_fastest_participants, Type: smallint, Nullable: NO, Default: None
+  Column: sequence_option, Type: smallint, Nullable: NO, Default: None
+  Column: event_id, Type: integer, Nullable: NO, Default: None
+  Column: series_for_seeding_id, Type: integer, Nullable: YES, Default: None
+
+Table: core_wavett_categories
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: wavett_id, Type: integer, Nullable: NO, Default: None
+  Column: category_id, Type: integer, Nullable: NO, Default: None
+
+Table: django_admin_log
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: action_time, Type: timestamp with time zone, Nullable: NO, Default: None
+  Column: object_id, Type: text, Nullable: YES, Default: None
+  Column: object_repr, Type: character varying, Nullable: NO, Default: None
+  Column: action_flag, Type: smallint, Nullable: NO, Default: None
+  Column: change_message, Type: text, Nullable: NO, Default: None
+  Column: content_type_id, Type: integer, Nullable: YES, Default: None
+  Column: user_id, Type: integer, Nullable: NO, Default: None
+
+Table: django_content_type
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: app_label, Type: character varying, Nullable: NO, Default: None
+  Column: model, Type: character varying, Nullable: NO, Default: None
+
+Table: django_migrations
+  Column: id, Type: integer, Nullable: NO, Default: None
+  Column: app, Type: character varying, Nullable: NO, Default: None
+  Column: name, Type: character varying, Nullable: NO, Default: None
+  Column: applied, Type: timestamp with time zone, Nullable: NO, Default: None
+
+Table: django_session
+  Column: session_key, Type: character varying, Nullable: NO, Default: None
+  Column: session_data, Type: text, Nullable: NO, Default: None
+  Column: expire_date, Type: timestamp with time zone, Nullable: NO, Default: None
