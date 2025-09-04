@@ -41,7 +41,7 @@ def read_unique_labels(csv_path: str):
     return sorted(values)
 
 
-def write_merged_catmap(format_name: str, labels: list[str]) -> OrderedDict:
+def write_merged_catmap(format_name: str, labels: list[str]) -> tuple[OrderedDict, list[str]]:
     """Merge labels into catmap/<format>.json as { label: [normalized_category, gender] } mapping.
 
     - Creates the file if it does not exist.
@@ -59,16 +59,13 @@ def write_merged_catmap(format_name: str, labels: list[str]) -> OrderedDict:
             with open(target, "r", encoding="utf-8") as f:
                 data = json.load(f)
             if isinstance(data, dict):
-                existing = data
-            elif isinstance(data, dict) and "label_aliases" in data:
-                # Not reached due to previous branch; kept for clarity
-                existing = {a[0]: (a[2] if len(a) > 2 else "") for a in data.get("label_aliases", []) if a}
-            else:
-                # Convert known structure with label_aliases to mapping if present
-                if isinstance(data, dict) and "label_aliases" in data:
+                if "label_aliases" in data:
+                    # Convert old structure to simple mapping
                     existing = {a[0]: (a[2] if len(a) > 2 else "") for a in data.get("label_aliases", []) if a}
                 else:
-                    existing = {}
+                    existing = data
+            else:
+                existing = {}
         except Exception:
             existing = {}
 
@@ -77,6 +74,7 @@ def write_merged_catmap(format_name: str, labels: list[str]) -> OrderedDict:
 
     # Merge labels (preserve existing values)
     merged = OrderedDict()
+    new_keys = sorted(set(labels) - set(existing.keys()))
     for k in sorted(set(existing.keys()) | set(labels)):
         if k in existing:
             merged[k] = existing[k]
@@ -88,7 +86,7 @@ def write_merged_catmap(format_name: str, labels: list[str]) -> OrderedDict:
         json.dump(merged, f, ensure_ascii=False, indent=2)
         f.write("\n")
 
-    return merged
+    return merged, new_keys
 
 
 def extract_category_gender(label: str) -> tuple[str, str]:
@@ -172,9 +170,11 @@ def main():
     elif len(sys.argv) == 3:
         format_name, csv_path = sys.argv[1], sys.argv[2]
         labels = read_unique_labels(csv_path)
-        merged = write_merged_catmap(format_name, labels)
-        # Informative message only; JSON is written to file
-        sys.stderr.write(f"Merged {len(labels)} labels into catmap/{format_name}.json (total {len(merged)} keys)\n")
+        merged, added = write_merged_catmap(format_name, labels)
+        # Print summary with number of added keys and list them
+        print(f"Added {len(added)} keys to catmap/{format_name}.json")
+        for k in added:
+            print(k)
         return
     else:
         print(f"Usage:\n  {sys.argv[0]} <bikereg.csv>\n  {sys.argv[0]} <format_name> <bikereg.csv>", file=sys.stderr)
