@@ -5,6 +5,7 @@ import os
 import sys
 from typing import Any, Dict, List, Optional, Tuple
 import re
+import ast
 
 
 def _norm_label(label: str) -> str:
@@ -40,7 +41,9 @@ class CatMap:
     def json_load(self, path: str) -> Any:
         """Load a JSON file allowing shell-style comments starting with '#'.
 
-        Strips trailing comments from each line before parsing JSON.
+        Strips trailing comments from each line, then parses as a tolerant
+        Python literal (via ast.literal_eval). Falls back to json.loads.
+        Also converts tuples to lists to be JSON-compatible in-memory.
         """
         try:
             with open(path, "r", encoding="utf-8") as f:
@@ -49,12 +52,30 @@ class CatMap:
                     # Remove comments starting with '#'
                     line = re.sub(r"#.*$", "", line)
                     lines.append(line)
-                content = "".join(lines)
+                content = "".join(lines).strip()
+
+                def to_jsonable(x: Any) -> Any:
+                    if isinstance(x, dict):
+                        return {k: to_jsonable(v) for k, v in x.items()}
+                    if isinstance(x, (list, tuple)):
+                        return [to_jsonable(v) for v in x]
+                    return x
+
+                # First try Python literal eval (handles single quotes, tuples, None, trailing commas)
+                try:
+                    data = ast.literal_eval(content)
+                    return to_jsonable(data)
+                except Exception:
+                    pass
+
+                # Fallback to strict JSON
                 return json.loads(content)
         except FileNotFoundError:
             print(f"CatMap: file not found {path}", file=sys.stderr)
         except json.JSONDecodeError as e:
             print(f"CatMap: invalid JSON in {path}: {e}", file=sys.stderr)
+        except Exception as e:
+            print(f"CatMap: failed to parse {path}: {e}", file=sys.stderr)
         return None
 
     def _load(self) -> None:
