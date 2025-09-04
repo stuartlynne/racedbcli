@@ -5,6 +5,7 @@ import os
 import csv
 import json
 from collections import OrderedDict
+import re
 
 
 COLUMN = 'Category Entered / Merchandise Ordered'
@@ -84,13 +85,81 @@ def write_merged_catmap(format_name: str, labels: list[str]) -> OrderedDict:
     return merged
 
 
+def extract_category_gender(label: str) -> tuple[str, str]:
+    """Extract a normalized (category, gender) from an organizer label.
+
+    Gender detection (case-insensitive): Men, Male, Boys -> Men; Women, Female, Girls -> Women; Open, O -> Open; M -> Men; F -> Women.
+    Removes detected gender token from the label, then normalizes spaces and punctuation.
+    Returns (normalized_category, gender_str_or_empty).
+    """
+    text = label or ""
+    src = text
+    gender = ""
+
+    # 1) Handle possessive first (Men's / Women's)
+    if re.search(r"\bmen'?s\b", text, flags=re.IGNORECASE):
+        gender = "Men"
+        text = re.sub(r"\bmen'?s\b", "", text, flags=re.IGNORECASE)
+    elif re.search(r"\bwomen'?s\b", text, flags=re.IGNORECASE):
+        gender = "Women"
+        text = re.sub(r"\bwomen'?s\b", "", text, flags=re.IGNORECASE)
+    else:
+        # 2) Prefer word tokens Men/Women/Male/Female/Boys/Girls
+        word_map = {
+            "men": "Men",
+            "male": "Men",
+            "boys": "Men",
+            "women": "Women",
+            "female": "Women",
+            "girls": "Women",
+        }
+        m = re.search(r"\b(men|male|boys|women|female|girls)\b", text, flags=re.IGNORECASE)
+        if m:
+            gender = word_map[m.group(1).lower()]
+            start, end = m.span()
+            text = (text[:start] + text[end:]).strip()
+        else:
+            # 3) Single-letter tokens M/F
+            m = re.search(r"\b(m|f)\b", text, flags=re.IGNORECASE)
+            if m:
+                gender = "Men" if m.group(1).lower() == "m" else "Women"
+                start, end = m.span()
+                text = (text[:start] + text[end:]).strip()
+            else:
+                # 4) Open tokens
+                m = re.search(r"\b(open|o)\b", text, flags=re.IGNORECASE)
+                if m:
+                    gender = "Open"
+                    start, end = m.span()
+                    text = (text[:start] + text[end:]).strip()
+
+    # If we determined Men/Women, also remove stray 'Open' tokens remaining
+    if gender in ("Men", "Women"):
+        text = re.sub(r"\b(open|o)\b", "", text, flags=re.IGNORECASE)
+
+    # Normalize multiple spaces
+    text = re.sub(r"\s+", " ", text)
+    # Normalize spaces around slashes and commas
+    text = re.sub(r"\s*/\s*", "/", text)
+    text = re.sub(r"\s*,\s*", ", ", text)
+    # Clean stray spaces before punctuation
+    text = re.sub(r"\s+([,/])", r" \1", text)
+
+    normalized = text.strip()
+    # Remove surrounding parentheses if they contain the whole string
+    mpar = re.fullmatch(r"\((.*)\)", normalized)
+    if mpar:
+        normalized = mpar.group(1).strip()
+    return normalized, gender
+
+
 def main():
     # Modes:
     # 1) One arg (CSV): emit mapping to stdout (original behavior)
     # 2) Two args (format, CSV): merge into catmap/<format>.json and print merged mapping to stdout
     if len(sys.argv) == 2:
         labels = read_unique_labels(sys.argv[1])
-        mapping = OrderedDict((label, "") for label in labels)
+        mapping = OrderedDict((label, list(extract_category_gender(label))) for label in labels)
         json.dump(mapping, sys.stdout, ensure_ascii=False, indent=2)
         print()
         return
@@ -98,7 +167,9 @@ def main():
         format_name, csv_path = sys.argv[1], sys.argv[2]
         labels = read_unique_labels(csv_path)
         merged = write_merged_catmap(format_name, labels)
-        json.dump(merged, sys.stdout, ensure_ascii=False, indent=2)
+        # Also emit a proposed mapping with (category, gender) tuples for convenience
+        proposed = OrderedDict((label, list(extract_category_gender(label))) for label in merged.keys())
+        json.dump(proposed, sys.stdout, ensure_ascii=False, indent=2)
         print()
         return
     else:
