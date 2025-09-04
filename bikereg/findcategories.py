@@ -42,12 +42,12 @@ def read_unique_labels(csv_path: str):
 
 
 def write_merged_catmap(format_name: str, labels: list[str]) -> OrderedDict:
-    """Merge labels into catmap/<format>.json as { label: canonical } mapping.
+    """Merge labels into catmap/<format>.json as { label: [normalized_category, gender] } mapping.
 
     - Creates the file if it does not exist.
     - If an older structured file is found (with label_aliases), converts it to a simple mapping.
-    - Does not overwrite existing keys; adds missing ones with empty string values.
-    Returns the merged OrderedDict mapping.
+    - Does not overwrite existing keys; adds missing ones with extracted (category, gender).
+    Returns the merged OrderedDict mapping and writes it to disk.
     """
     base_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "catmap"))
     os.makedirs(base_dir, exist_ok=True)
@@ -72,10 +72,16 @@ def write_merged_catmap(format_name: str, labels: list[str]) -> OrderedDict:
         except Exception:
             existing = {}
 
-    # Merge labels
+    # Prepare proposed values for new labels
+    proposed = {lbl: list(extract_category_gender(lbl)) for lbl in labels}
+
+    # Merge labels (preserve existing values)
     merged = OrderedDict()
-    for k in sorted(existing.keys() | set(labels)):
-        merged[k] = existing.get(k, "")
+    for k in sorted(set(existing.keys()) | set(labels)):
+        if k in existing:
+            merged[k] = existing[k]
+        else:
+            merged[k] = proposed.get(k, ["", ""])  # fallback if any
 
     # Write back
     with open(target, "w", encoding="utf-8") as f:
@@ -167,10 +173,8 @@ def main():
         format_name, csv_path = sys.argv[1], sys.argv[2]
         labels = read_unique_labels(csv_path)
         merged = write_merged_catmap(format_name, labels)
-        # Also emit a proposed mapping with (category, gender) tuples for convenience
-        proposed = OrderedDict((label, list(extract_category_gender(label))) for label in merged.keys())
-        json.dump(proposed, sys.stdout, ensure_ascii=False, indent=2)
-        print()
+        # Informative message only; JSON is written to file
+        sys.stderr.write(f"Merged {len(labels)} labels into catmap/{format_name}.json (total {len(merged)} keys)\n")
         return
     else:
         print(f"Usage:\n  {sys.argv[0]} <bikereg.csv>\n  {sys.argv[0]} <format_name> <bikereg.csv>", file=sys.stderr)
