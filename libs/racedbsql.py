@@ -234,6 +234,18 @@ class RaceDBSQL:
             print(f"Database error: {error}", file=sys.stderr)
         return None
 
+    def find_category_format_by_id(self, fmt_id):
+        """Find a core_categoryformat by id. Returns dict or None."""
+        try:
+            query = "SELECT id, name, description FROM core_categoryformat WHERE id = %s;"
+            self.cur_execute(
+                f"Find category format by id {fmt_id}", query, (fmt_id,), debug=self.debug
+            )
+            return self.cur.fetchone()
+        except psycopg2.DatabaseError as error:
+            print(f"Database error: {error}", file=sys.stderr)
+        return None
+
     def find_categories_for_format_id(self, format_id):
         """Return list of categories (code, gender, description) for a format_id."""
         try:
