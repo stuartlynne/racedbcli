@@ -165,6 +165,8 @@ def extract_category_gender(label: str) -> tuple[str, str]:
     mpar = re.fullmatch(r"\((.*)\)", normalized)
     if mpar:
         normalized = mpar.group(1).strip()
+    if not gender:
+        gender = "Open"
     return normalized, gender
 
 
