@@ -114,20 +114,21 @@ class RaceDB:
         create_xlsx_file(file_path, self.LicenseHolderHeaders, data)
 
 
-    def create_license_holders_xlsx_in_memory(self, data):
+    def create_license_holders_xlsx_in_memory(self, data, teams=False):
         output = io.BytesIO()
         df = pd.DataFrame(data, columns=self.LicenseHolderHeaders)
         df.to_excel(output, index=False, engine='xlsxwriter')
         output.seek(0)
         return output
 
-    def upload_license_holders(self,):
+    def upload_license_holders(self, teams=False):
 
+        print(f"License holder teams: {teams}", file=sys.stderr)
         print('License holder data:', self.license_holder_data, file=sys.stderr)
         if True:
             xlsx_file = self.create_license_holders_xlsx_file(self.license_holder_data, file_path="license_holders.xlsx")
 
-        xlsx_file = self.create_license_holders_xlsx_in_memory(self.license_holder_data)
+        xlsx_file = self.create_license_holders_xlsx_in_memory(self.license_holder_data, teams=teams)
 
         next_path = "RaceDB/LicenseHolders/LicenseHoldersImportExcel/"
 
@@ -167,24 +168,30 @@ class RaceDB:
                   file=sys.stdout)
         pass
 
-    def create_registrations_xlsx_file(self, data, file_path=None):
-        create_xlsx_file(file_path, self.RegistrationHeaders, data)
+    def create_registrations_xlsx_file(self, data, file_path=None, teams=False):
+        registration_headers = self.RegistrationHeaders
+        if teams:
+            registrations_headers.insert(len(teams)-1, 'Team')
+        create_xlsx_file(file_path, registration_headers, data)
 
 
-    def create_registrations_xlsx_in_memory(self, data):
+    def create_registrations_xlsx_in_memory(self, data, teams=False):
         output = io.BytesIO()
-        df = pd.DataFrame(data, columns=self.RegistrationHeaders)
+        registration_headers = self.RegistrationHeaders
+        if teams:
+            registrations_headers.insert(len(teams)-1, 'Team')
+        df = pd.DataFrame(data, columns=registration_headers)
         df.to_excel(output, index=False, engine='xlsxwriter')
         output.seek(0)
         return output
 
-    def upload_registrations(self, competition_id=None, upload=False, bibs=False):
+    def upload_registrations(self, competition_id=None, upload=False, bibs=False, teams=False):
 
         if True:
-            xlsx_file = self.create_registrations_xlsx_file(self.registration_data, file_path="registrations.xlsx")
+            xlsx_file = self.create_registrations_xlsx_file(self.registration_data, file_path="registrations.xlsx", teams=teams)
         if not upload:
             return
-        xlsx_file = self.create_registrations_xlsx_in_memory(self.registration_data)
+        xlsx_file = self.create_registrations_xlsx_in_memory(self.registration_data, teams=teams)
 
         next_path = f"RaceDB/Competitions/CompetitionDashboard/{competition_id}/UploadPrereg/{competition_id}/"
 
