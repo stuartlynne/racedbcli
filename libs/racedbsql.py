@@ -160,31 +160,52 @@ class RaceDBSQL:
 
 
     def find_competition(self, name=None, date=None):
+        """Find a competition by exact name and/or start_date.
+
+        Returns a dict (id, name, long_name, start_date, category_format_id) or None.
+        """
         print(f"find_competition: {name} {date}", file=sys.stdout)
         try:
             if name and date:
-                competition_query = "SELECT id, name, long_name, start_date FROM core_competition WHERE name = %s; and start_date = %s;"
-                self.cur_execute(f'Find competition by name {name}', competition_query,  (name, start_date), debug=False)
-            elif name :
-                competition_query = "SELECT id, name, long_name, start_date FROM core_competition WHERE name = %s;"
-                self.cur_execute(f'Find competition by name {name}', competition_query,  (name,), debug=False)
+                competition_query = (
+                    "SELECT id, name, long_name, start_date, category_format_id "
+                    "FROM core_competition WHERE name = %s AND start_date = %s;"
+                )
+                self.cur_execute(
+                    f"Find competition by name/date {name} {date}",
+                    competition_query,
+                    (name, date),
+                    debug=self.debug,
+                )
+            elif name:
+                competition_query = (
+                    "SELECT id, name, long_name, start_date, category_format_id "
+                    "FROM core_competition WHERE name = %s;"
+                )
+                self.cur_execute(
+                    f"Find competition by name {name}", competition_query, (name,), debug=self.debug
+                )
             elif date:
-                competition_query = "SELECT id, name, long_name, start_date FROM core_competition WHERE start_date = %s;"
-                self.cur_execute(f'Find competition by date {date}', competition_query, (date,), debug=True)
-            
+                competition_query = (
+                    "SELECT id, name, long_name, start_date, category_format_id "
+                    "FROM core_competition WHERE start_date = %s;"
+                )
+                self.cur_execute(
+                    f"Find competition by date {date}", competition_query, (date,), debug=self.debug
+                )
+            else:
+                print("find_competition requires name and/or date", file=sys.stderr)
+                return None
+
             competition = self.cur.fetchone()
             if not competition:
-                 print(f"No competition found for {name or date}.", file=sys.stderr)
-                 return None
-            #competition_id, competition_name, competition_long_name, competition_start_date = competition
-            #print(f"Competition found: {competition}", file=sys.stderr)
-            #return competition_id, competition_name, competition_long_name, competition_start_date
+                print(f"No competition found for {name or date}.", file=sys.stderr)
+                return None
             return competition
-
 
         except psycopg2.DatabaseError as error:
             print(f"Database error: {error}", file=sys.stdout)
-        return None, None, None, None
+            return None
 
     def find_numberset(self, numberset=None):
         print(f"find_numberset: {numberset}", file=sys.stdout)
@@ -239,6 +260,19 @@ class RaceDBSQL:
         fmt_id = fmt["id"] if isinstance(fmt, dict) else fmt[0]
         cats = self.find_categories_for_format_id(fmt_id)
         return fmt, cats
+
+    def find_competition_categories(self, name=None, date=None):
+        """Find categories for a competition identified by name and/or date.
+
+        Returns tuple (competition_record, categories_list). If not found, returns (None, []).
+        """
+        comp = self.find_competition(name=name, date=date)
+        if not comp:
+            return None, []
+        # comp is a dict (RealDictCursor).
+        fmt_id = comp.get("category_format_id") if isinstance(comp, dict) else comp[4]
+        cats = self.find_categories_for_format_id(fmt_id)
+        return comp, cats
   
 
     
@@ -272,5 +306,19 @@ if __name__ == "__main__":
             desc = c.get("description") if isinstance(c, dict) else c[2]
             print(f"  {code}\t{gender}\t{desc}", file=sys.stdout)
         print(f"License Holders found: {licenseholders}", file=sys.stdout)
+
+    # Test: find competition categories by date
+    comp_date = "2018-11-11"
+    print(f"Finding competition categories for date {comp_date}", file=sys.stdout)
+    comp, cats = racedb.find_competition_categories(date=comp_date)
+    if not comp:
+        print(f"No competition found for date {comp_date}.", file=sys.stdout)
+    else:
+        print(f"Competition found: {comp}", file=sys.stdout)
+        for c in cats:
+            code = c.get("code") if isinstance(c, dict) else c[0]
+            gender = c.get("gender") if isinstance(c, dict) else c[1]
+            desc = c.get("description") if isinstance(c, dict) else c[2]
+            print(f"  {code}\t{gender}\t{desc}", file=sys.stdout)
 
     sys.exit(0)
