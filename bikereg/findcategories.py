@@ -7,6 +7,14 @@ import json
 from collections import OrderedDict
 import re
 
+# Optional DB access for category validation
+try:
+    if __name__ == "__main__":
+        sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+    from libs.racedbsql import RaceDBSQL
+except Exception:
+    RaceDBSQL = None
+
 
 COLUMN = 'Category Entered / Merchandise Ordered'
 
@@ -41,7 +49,7 @@ def read_unique_labels(csv_path: str):
     return sorted(values)
 
 
-def write_merged_catmap(format_name: str, labels: list[str]) -> tuple[OrderedDict, list[str]]:
+def write_merged_catmap(format_name: str, labels: list[str], allowed_codes: set[str] | None = None) -> tuple[OrderedDict, list[str]]:
     """Merge labels into catmap/<format>.json as { label: [normalized_category, gender] } mapping.
 
     - Creates the file if it does not exist.
@@ -69,8 +77,13 @@ def write_merged_catmap(format_name: str, labels: list[str]) -> tuple[OrderedDic
         except Exception:
             existing = {}
 
-    # Prepare proposed values for new labels
-    proposed = {lbl: list(extract_category_gender(lbl)) for lbl in labels}
+    # Prepare proposed values for new labels with optional validation against allowed codes
+    proposed = {}
+    for lbl in labels:
+        cat, gen = extract_category_gender(lbl)
+        if allowed_codes is not None and cat not in allowed_codes:
+            cat = f"{cat} FIX"
+        proposed[lbl] = [cat, gen]
 
     # Merge labels (preserve existing values)
     merged = OrderedDict()
@@ -159,26 +172,54 @@ def extract_category_gender(label: str) -> tuple[str, str]:
 
 def main():
     # Modes:
-    # 1) One arg (CSV): emit mapping to stdout (original behavior)
-    # 2) Two args (format, CSV): merge into catmap/<format>.json and print merged mapping to stdout
-    if len(sys.argv) == 2:
-        labels = read_unique_labels(sys.argv[1])
-        mapping = OrderedDict((label, list(extract_category_gender(label))) for label in labels)
+    # - One positional arg (CSV): emit mapping to stdout.
+    # - Two positional args (format, CSV): merge into catmap/<format>.json and report added keys.
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Extract BikeReg categories and optionally merge into catmap with validation.")
+    parser.add_argument("arg1", help="CSV path, or category_format when merging")
+    parser.add_argument("arg2", nargs="?", help="CSV path when merging")
+    parser.add_argument("--host", default="localhost", help="DB host for category validation")
+    parser.add_argument("--name", default=None, help="Competition name for validation")
+    parser.add_argument("--date", default=None, help="Competition date (YYYY-MM-DD) for validation")
+
+    args = parser.parse_args()
+
+    # Load allowed category codes from DB if possible
+    allowed_codes: set[str] | None = None
+    if args.name or args.date:
+        if RaceDBSQL is None:
+            print("Warning: RaceDBSQL not available; skipping validation", file=sys.stderr)
+        else:
+            try:
+                db = RaceDBSQL(host=args.host)
+                comp, cats = db.find_competition_categories(name=args.name, date=args.date)
+                allowed_codes = {c.get('code') for c in cats if isinstance(c, dict) and c.get('code')}
+                print(f"Loaded {len(allowed_codes)} allowed categories from competition", file=sys.stderr)
+            except Exception as e:
+                print(f"Warning: failed to fetch categories: {e}", file=sys.stderr)
+
+    if args.arg2 is None:
+        # One-arg mode: output mapping to stdout
+        labels = read_unique_labels(args.arg1)
+        mapping = OrderedDict()
+        for label in labels:
+            cat, gen = extract_category_gender(label)
+            if allowed_codes is not None and cat not in allowed_codes:
+                cat = f"{cat} FIX"
+            mapping[label] = [cat, gen]
         json.dump(mapping, sys.stdout, ensure_ascii=False, indent=2)
         print()
         return
-    elif len(sys.argv) == 3:
-        format_name, csv_path = sys.argv[1], sys.argv[2]
+    else:
+        # Two-arg merge mode
+        format_name, csv_path = args.arg1, args.arg2
         labels = read_unique_labels(csv_path)
-        merged, added = write_merged_catmap(format_name, labels)
-        # Print summary with number of added keys and list them
+        merged, added = write_merged_catmap(format_name, labels, allowed_codes=allowed_codes)
         print(f"Added {len(added)} keys to catmap/{format_name}.json")
         for k in added:
             print(k)
         return
-    else:
-        print(f"Usage:\n  {sys.argv[0]} <bikereg.csv>\n  {sys.argv[0]} <format_name> <bikereg.csv>", file=sys.stderr)
-        sys.exit(1)
 
 
 if __name__ == '__main__':
