@@ -7,13 +7,11 @@ import json
 from collections import OrderedDict
 import re
 
-# Optional DB access for category validation
-try:
-    if __name__ == "__main__":
-        sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-    from libs.racedbsql import RaceDBSQL
-except Exception:
-    RaceDBSQL = None
+# Required DB access for category validation
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
+from libs.racedbsql import RaceDBSQL
 
 
 COLUMN = 'Category Entered / Merchandise Ordered'
@@ -182,23 +180,34 @@ def main():
     parser.add_argument("--host", default="localhost", help="DB host for category validation")
     parser.add_argument("--name", default=None, help="Competition name for validation")
     parser.add_argument("--date", default=None, help="Competition date (YYYY-MM-DD) for validation")
+    parser.add_argument("--format", dest="fmt", default=None, help="Category format name for validation when not merging")
 
     args = parser.parse_args()
 
     # Load allowed category codes from DB if possible
-    allowed_codes: set[str] | None = None
-    if args.name or args.date:
-        if RaceDBSQL is None:
-            print("Warning: RaceDBSQL not available; skipping validation", file=sys.stderr)
-        else:
-            try:
-                db = RaceDBSQL(host=args.host)
+    allowed_codes = None
+    if RaceDBSQL is None:
+        print("Warning: RaceDBSQL not available; skipping validation", file=sys.stderr)
+    else:
+        try:
+            db = RaceDBSQL(host=args.host)
+            if args.arg2 is not None:
+                # Merge mode: validate by format name (arg1)
+                fmt, cats = db.find_categories_for_format_name(args.arg1)
+                allowed_codes = {c.get('code') for c in cats if isinstance(c, dict) and c.get('code')}
+                print(f"Loaded {len(allowed_codes)} categories for format {args.arg1}", file=sys.stderr)
+            elif args.fmt:
+                fmt, cats = db.find_categories_for_format_name(args.fmt)
+                allowed_codes = {c.get('code') for c in cats if isinstance(c, dict) and c.get('code')}
+                print(f"Loaded {len(allowed_codes)} categories for format {args.fmt}", file=sys.stderr)
+            elif args.name or args.date:
                 comp, cats = db.find_competition_categories(name=args.name, date=args.date)
                 allowed_codes = {c.get('code') for c in cats if isinstance(c, dict) and c.get('code')}
-                print(f"Loaded {len(allowed_codes)} allowed categories from competition", file=sys.stderr)
-            except Exception as e:
-                print(f"Warning: failed to fetch categories: {e}", file=sys.stderr)
+                print(f"Loaded {len(allowed_codes)} categories from competition", file=sys.stderr)
+        except Exception as e:
+            print(f"Warning: failed to fetch categories: {e}", file=sys.stderr)
 
+    print(f"Allowed codes: {sorted(allowed_codes) if allowed_codes is not None else 'None'}", file=sys.stderr)
     if args.arg2 is None:
         # One-arg mode: output mapping to stdout
         labels = read_unique_labels(args.arg1)
