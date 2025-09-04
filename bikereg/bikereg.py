@@ -155,10 +155,9 @@ class GetBikeReg:
             else:
                 g_norm = None
             if getattr(self, 'organizer_map', None):
-                alias = self.organizer_map.lookup_label(label, g_norm)
-                if alias:
-                    # alias tuple form: (organizer_label, gender|None, canonical_name[, ...])
-                    canonical = alias[2] if len(alias) > 2 else alias[0]
+                entry = self.organizer_map.lookup_label(label)
+                if entry and isinstance(entry, (list, tuple)) and entry:
+                    canonical = entry[0]
                     br['Category Entered / Merchandise Ordered'] = canonical
 
             flag, requested_category = self.catmap.get_requested_category(br['Category Entered / Merchandise Ordered'])
