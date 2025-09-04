@@ -227,6 +227,7 @@ def main():
     parser.add_argument('--csvfile', type=str, default=None, help='BikeReg CSV file')
     parser.add_argument('--template_date', type=str, help='Copy the competition from this date.')
     parser.add_argument('--start_date', type=str, help='Start date of the competition in YYYY-MM-DD format.')
+    parser.add_argument('--category_format', type=str, help='CategoryFormat name (e.g., lmcx2018)')
     parser.add_argument('--new_name', type=str, help='Name of the competition.')
     parser.add_argument('--bibs', action='store_true', help='Generate bib numbers.')
     parser.add_argument('--stderr', "--debug", action='store_true', help='Enable stderr output.')
@@ -244,6 +245,7 @@ def main():
     csvfile = args.csvfile         
     template_date = args.template_date
     start_date = args.start_date
+    category_format = args.category_format
     new_name = args.new_name
     bibs = args.bibs
 
@@ -251,6 +253,30 @@ def main():
 
     sql = RaceDBSQL(host)
     racedb = RaceDB(host=host, username=username, password=password,)
+
+    # Determine categories from either start_date (competition) or category_format
+    categories = []
+    if start_date:
+        comp, categories = sql.find_competition_categories(date=start_date)
+        if not comp:
+            print(f"Error: competition not found for start_date {start_date}", file=sys.stderr)
+            sys.exit(1)
+        print(f"Using categories from competition '{comp.get('name')}' on {comp.get('start_date')}", file=sys.stdout)
+    elif category_format:
+        fmt, categories = sql.find_categories_for_format_name(category_format)
+        if not fmt:
+            print(f"Error: category_format '{category_format}' not found", file=sys.stderr)
+            sys.exit(1)
+        print(f"Using categories from format '{fmt.get('name')}'", file=sys.stdout)
+    else:
+        print("Error: must specify either --start_date or --category_format", file=sys.stderr)
+        sys.exit(1)
+    print(f"Categories: {categories}", file=sys.stdout)
+
+    # Optionally show a quick summary of fetched categories
+    if categories:
+        codes = [ (c.get('code'), c.get('gender')) for c in categories ]
+        print(f"Loaded {len(categories)} categories: {codes}", file=sys.stdout)
 
     ccn = GetCCN()
     catmap = CategoryMap()
@@ -273,6 +299,7 @@ def main():
         gprint('1. Finished Processing BikeReg CSV file:', csvfile, file=sys.stdout)
         gprint('1. ---------------------------------')
 
+    exit()
     # 2. Process the registrations
     with AutoPagerEx(stderr=args.stderr, stderrdup=args.stderrdup, line_buffering=autopage.line_buffer_from_input()) as (sys.stdout, sys.stderr):
         gprint('2. ---------------------------------')
@@ -346,5 +373,4 @@ def main():
 if __name__ == "__main__":
     main()
     exit(0)
-
 
