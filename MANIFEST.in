@@ -1,4 +1,4 @@
 include racedbcli/README.md
 include racedbcli/cli/members.xlsx
 recursive-include racedbcli/libs *
-
+include tests/testgetcategory.py

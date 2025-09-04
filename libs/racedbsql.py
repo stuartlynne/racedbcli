@@ -199,6 +199,46 @@ class RaceDBSQL:
         except psycopg2.DatabaseError as error:
             print(f"Database error: {error}", file=sys.stderr)
         return None
+
+    # --- Categories / CategoryFormats ---
+    def find_category_format(self, name):
+        """Find a core_categoryformat by name (case-insensitive). Returns dict or None."""
+        try:
+            query = "SELECT id, name, description FROM core_categoryformat WHERE name ILIKE %s;"
+            self.cur_execute(
+                f"Find category format by name {name}", query, (name,), debug=self.debug
+            )
+            return self.cur.fetchone()
+        except psycopg2.DatabaseError as error:
+            print(f"Database error: {error}", file=sys.stderr)
+        return None
+
+    def find_categories_for_format_id(self, format_id):
+        """Return list of categories (code, gender, description) for a format_id."""
+        try:
+            query = (
+                "SELECT code, gender, description FROM core_category "
+                "WHERE format_id = %s ORDER BY sequence, code;"
+            )
+            self.cur_execute(
+                f"Find categories for format_id {format_id}", query, (format_id,), debug=self.debug
+            )
+            return self.cur.fetchall()
+        except psycopg2.DatabaseError as error:
+            print(f"Database error: {error}", file=sys.stderr)
+        return []
+
+    def find_categories_for_format_name(self, format_name):
+        """Find a category format by name, then return its categories.
+
+        Returns tuple (format_record, categories).
+        """
+        fmt = self.find_category_format(format_name)
+        if not fmt:
+            return None, []
+        fmt_id = fmt["id"] if isinstance(fmt, dict) else fmt[0]
+        cats = self.find_categories_for_format_id(fmt_id)
+        return fmt, cats
   
 
     
@@ -218,6 +258,19 @@ if __name__ == "__main__":
             licenseholders = racedb.find_name_dob(first_name=first_name, last_name=last_name, dob=dob)
         else:
             licenseholders = racedb.find_name(first_name=first_name, last_name=last_name)
+    # Test: find categories by CategoryFormat name
+    fmt_name = "lmcx2024"
+    print(f"Finding categories for CategoryFormat '{fmt_name}'", file=sys.stdout)
+    fmt, categories = racedb.find_categories_for_format_name(fmt_name)
+    if not fmt:
+        print(f"CategoryFormat '{fmt_name}' not found.", file=sys.stdout)
+    else:
+        print(f"CategoryFormat found: {fmt}", file=sys.stdout)
+        for c in categories:
+            code = c.get("code") if isinstance(c, dict) else c[0]
+            gender = c.get("gender") if isinstance(c, dict) else c[1]
+            desc = c.get("description") if isinstance(c, dict) else c[2]
+            print(f"  {code}\t{gender}\t{desc}", file=sys.stdout)
         print(f"License Holders found: {licenseholders}", file=sys.stdout)
 
     sys.exit(0)
