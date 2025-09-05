@@ -20,7 +20,7 @@ from libs.racedb import RaceDB
 from libs.racedbsql import RaceDBSQL
 from libs.bikeregcsv import BikeRegCSV
 from libs.ccn import GetCCN
-from libs.categorymap import CategoryMap
+#from libs.categorymap import CategoryMap
 from libs.catmap import CatMap
 from libs.lib import gprint, yprint
 from cli.competition import create_competition_from_template
@@ -46,8 +46,9 @@ class GetBikeReg:
         self.csvfile = csvfile
         self.bikeregcsv = BikeRegCSV(csvfile)
         self.registrations = []
-        # Optional organizer-provided label alias map (CatMap)
-        self.organizer_map = None
+        # Per-format organizer label mapping (CatMap instance)
+        # and allowed category codes from DB for purchase detection
+        self.allowed_codes = None
 
     # check license holder
     #   - missing in RaceDB
@@ -146,29 +147,22 @@ class GetBikeReg:
                 yprint(f"  Cannot find: {first_name} {last_name} {dob} {gender} in RaceDB or CCN", file=sys.stdout)
                 self.racedb.new_license_holder(first_name=first_name, last_name=last_name, gender=gender, dob=dob, msg='Not found')
 
-            # Normalize category label via organizer alias map (per-format) before mapping
+            # Normalize category label via per-format CatMap mapping
             label = br['Category Entered / Merchandise Ordered']
-            g = br.get('Gender')
-            if isinstance(g, str):
-                g_norm = g.strip().upper()
-                g_norm = 'M' if g_norm.startswith('M') else ('F' if g_norm.startswith('F') else None)
-            else:
-                g_norm = None
-            if getattr(self, 'organizer_map', None):
-                entry = self.organizer_map.lookup_label(label)
+            print('  label:', label, file=sys.stdout)
+            canonical = label
+            if self.catmap:
+                entry = self.catmap.lookup_label(label)
                 if entry and isinstance(entry, (list, tuple)) and entry:
                     canonical = entry[0]
-                    br['Category Entered / Merchandise Ordered'] = canonical
 
-            flag, requested_category = self.catmap.get_requested_category(br['Category Entered / Merchandise Ordered'])
-            print('  Requested:', requested_category, file=sys.stdout)
-            print('Flag:', flag, file=sys.stderr)
-            if not flag:
-                print('  Purchased: %s' % (requested_category), file=sys.stdout)
-                self.racedb.add_purchase(first_name=first_name, last_name=last_name, purchase=requested_category)
+            # If canonical is not an allowed category code, treat as a purchase
+            if self.allowed_codes and canonical not in self.allowed_codes:
+                print('  Purchased: %s' % (canonical), file=sys.stdout)
+                self.racedb.add_purchase(first_name=first_name, last_name=last_name, purchase=canonical)
                 continue
 
-            br['requested_category'] = requested_category
+            br['requested_category'] = canonical
             self.registrations.append(br)
 
             #print('Category entered: %s' % br['Category Entered / Merchandise Ordered'], file=sys.stdout)
@@ -296,7 +290,7 @@ def main():
         print(f"Loaded {len(categories)} categories: {codes}", file=sys.stdout)
 
     ccn = GetCCN()
-    catmap = CategoryMap()
+    #catmap = CategoryMap()
 
     # Determine categories and format name for CatMap
     fmt_name = None
@@ -322,16 +316,19 @@ def main():
         sys.exit(1)
 
     # Instantiate organizer category alias map for the selected format
-    organizer_map = CatMap(fmt_name) if fmt_name else None
+    catmap = CatMap(fmt_name) if fmt_name else None
 
     # Optionally show a quick summary of fetched categories
     if categories:
         codes = [ (c.get('code'), c.get('gender')) for c in categories ]
-        print(f"Loaded {len(categories)} categories: {codes}", file=sys.stdout)
+        #print(f"Loaded {len(categories)} categories: {codes}", file=sys.stdout)
+        for k, v in catmap.map.items():
+            print(f"  Alias: '{k}' => '{v}'", file=sys.stdout)
 
     bikereg = GetBikeReg(racedb=racedb, sql=sql, ccn=ccn, catmap=catmap, username=username, password=password, csvfile=csvfile)
-    # Attach organizer_map for alias lookups during processing
-    bikereg.organizer_map = organizer_map
+    # Provide allowed category codes for purchase detection
+    if categories:
+        bikereg.allowed_codes = { c.get('code') for c in categories if isinstance(c, dict) and c.get('code') }
 
     #if False:
     #    os.environ['LESS'] += f"--quit-if-one-screen"
@@ -349,7 +346,7 @@ def main():
         gprint('1. Finished Processing BikeReg CSV file:', csvfile, file=sys.stdout)
         gprint('1. ---------------------------------')
 
-    exit()
+    #exit()
     # 2. Process the registrations
     with AutoPagerEx(stderr=args.stderr, stderrdup=args.stderrdup, line_buffering=autopage.line_buffer_from_input()) as (sys.stdout, sys.stderr):
         gprint('2. ---------------------------------')
