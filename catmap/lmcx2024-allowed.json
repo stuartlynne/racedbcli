@@ -1,0 +1,27 @@
+[
+        # License               Gender  (Min, Max),  Allowed_Categories
+        ('Cat 5',               None,   (None, None),['Novice', ]),
+        ('Cat 4',               None,   (None, 40),  ['Intermediate', ]),
+        ('Cat 3',               None,   (None, None),['Intermediate',  ]),
+
+        #(None,                  'M',    (35,None),   ['Master A', 'Master', ]),
+        #(None,                  'F',    (35,None),   ['Master', ]),
+
+        ('Elite',               'M',    (19,None),   ['Elite', ]),
+        ('Elite',               'F',    (19,None),   ['Elite', ]),
+        ('Under 23',            None,   (19,23),     ['Elite', ]),
+
+        ('Master',              'M',    (35,44),     ['Elite', 'Master A', 'Master B', ]),
+        ('Master',              'M',    (45,55),     ['Elite', 'Master A', 'Master B', ]),
+        ('Master',              'M',    (55,None),   ['Master A', 'Master B', 'Master 55+', ],),
+
+        ('Master',              'F',    (35,None),   ['Elite', 'Master', ]),
+
+        ('Junior',              None,  (17, 18),    ['Elite', ]),
+        ('Youth',               None,  (15, 16),    ['U17', ]),
+        ('Youth',               None,  (13, 14),    ['U15', ]),
+        ('Youth',               None,  (None, 12),  ['U13', ]),
+        ('ANY',                 None,  (20, None),  ['Single Speed', ]),
+        (None,                  None,  (None, 19),  ['Youth Beginners', ]),
+        (None,                  None,  (20, None),  ['Novice', ]),
+]
