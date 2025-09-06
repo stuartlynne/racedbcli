@@ -30,6 +30,7 @@ BikeReg_Aliases = {
     "o'mahony, david, 1981-04-15": ("o'mahony", 'dave', '1981-04-15', '00000000000'),
     "murison, alex, 1992-02-04": ('murison', 'alexander', '1992-02-04', '00000000000'),
     "wood, dan, 1972-10-20": ('wood', 'daniel', '1972-10-20', ''),
+    "birkenbuel, james c, 1974-03-07": ('birkenbuel', 'james cameron', '1974-03-07', '10051488490'),
 
 
 }
@@ -78,7 +79,7 @@ class BikeRegCSV:
 
                 row['Date of Birth'] = dob
                 lookup = f"{row['Last Name']}, {row['First Name']}, {dob}".lower()
-                print(f"Registrant[{i}]: {lookup} ", file=sys.stdout)
+                print(f"Registrant[{i}]: lookup {lookup} Alias check", file=sys.stdout)
                 if lookup in BikeReg_Aliases:
                     last_name, first_name, dob, uci_id = BikeReg_Aliases[lookup]
                     row['Last Name'] = last_name
