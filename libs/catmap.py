@@ -71,11 +71,11 @@ class CatMap:
                 # Fallback to strict JSON
                 return json.loads(content)
         except FileNotFoundError:
-            print(f"CatMap: file not found {path}", file=sys.stderr)
+            print(f"CatMap: file not found {path}", file=sys.stdout)
         except json.JSONDecodeError as e:
-            print(f"CatMap: invalid JSON in {path}: {e}", file=sys.stderr)
+            print(f"CatMap: invalid JSON in {path}: {e}", file=sys.stdout)
         except Exception as e:
-            print(f"CatMap: failed to parse {path}: {e}", file=sys.stderr)
+            print(f"CatMap: failed to parse {path}: {e}", file=sys.stdout)
         return None
 
     def _load(self) -> None:
@@ -93,6 +93,8 @@ class CatMap:
             self.allowed = allowed_data
         else:
             self.allowed = []
+        print(f"CatMap: loaded {len(self.map)} mappings and {len(self.allowed)} allowed rules from {path} and {allowed_path}", file=sys.stdout)
+        print(f"CatMap: {allowed_data}", file=sys.stdout)
 
     def lookup_label(self, label: str) -> Optional[List[Any]]:
         """Return the mapping entry for the exact label, or None if not found."""
