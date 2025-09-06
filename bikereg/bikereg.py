@@ -49,6 +49,11 @@ class GetBikeReg:
         # Per-format organizer label mapping (CatMap instance)
         # and allowed category codes from DB for purchase detection
         self.allowed_codes = None
+        self.stats = {
+                'racedb_found': 0,
+                'ccn_found': 0,
+                'both_found': 0,
+        }
 
     # check license holder
     #   - missing in RaceDB
@@ -98,6 +103,7 @@ class GetBikeReg:
                 by = "name"
 
             if racedb_license_holders:
+                self.stats['racedb_found'] += 1
                 for i, licenseholder in enumerate(racedb_license_holders):
                     info = [ licenseholder[k] for k in ['last_name', 'first_name', 'license_code', 'uci_id',] ]
                     print(f"  RaceDB[{i}] {info} {by}", file=sys.stdout)
@@ -109,6 +115,7 @@ class GetBikeReg:
 
             ccn_license_holders = self.ccn.get_license_holders(first_name, last_name, )
             if ccn_license_holders and len(ccn_license_holders) == 1:
+                self.stats['ccn_found'] += 1
                 ccn_license_holder = ccn_license_holders[0]
                 print('  CCN License Holder:', ccn_license_holder, file=sys.stderr)
                 licenses = ccn_license_holder['licenses']
@@ -118,6 +125,8 @@ class GetBikeReg:
                 license_categories = ccn_license_holder['licenses']
             else:
                 license_categories = {}
+
+            self.stats['both_found'] += 1 if ccn_license_holders and racedb_license_holders else 0
 
             br['licenses'] = license_categories
 
@@ -139,17 +148,23 @@ class GetBikeReg:
                 br['license_number'] = ccn_license_holders[0]["license_number"]
                 br['license_type'] = ccn_license_holders[0]["license_type"]
                 br['license_check'] = True
+            elif racedb_license_holders:
+                br['license_number'] = racedb_license_holders[0]['license_code']
+                br['uci_id'] = racedb_license_holders[0]['uci_id']
+                br['license_check'] = False
             else:
                 br['license_check'] = False
 
             # If we cannot find the license holder in RaceDB, then we need to add them
             if not ccn_license_holders and not racedb_license_holders:
                 yprint(f"  Cannot find: {first_name} {last_name} {dob} {gender} in RaceDB or CCN", file=sys.stdout)
+            elif not racedb_license_holders:
+                yprint(f"  Cannot find: {first_name} {last_name} {dob} {gender} in RaceDB", file=sys.stdout)
                 self.racedb.new_license_holder(first_name=first_name, last_name=last_name, gender=gender, dob=dob, msg='Not found')
 
             # Normalize category label via per-format CatMap mapping
             label = br['Category Entered / Merchandise Ordered']
-            print('  label:', label, file=sys.stdout)
+            print(f"  label: {label} license_check: {br['license_check']}", file=sys.stdout)
             canonical = label
             if self.catmap:
                 entry = self.catmap.lookup_label(label)
@@ -169,6 +184,11 @@ class GetBikeReg:
             #if i > 20:
             #    break
 
+
+        print(f"Processed {len(self.registrations)} registrations", file=sys.stdout)
+        print(f"  Found in RaceDB: {self.stats['racedb_found']}", file=sys.stdout)
+        print(f"  Found in CCN: {self.stats['ccn_found']}", file=sys.stdout)
+        print(f"  Found in both: {self.stats['both_found']}", file=sys.stdout)
         print()
         print()
         print()
@@ -260,75 +280,89 @@ def main():
     new_name = args.new_name
     bibs = args.bibs
 
+    #if False:
+    #    os.environ['LESS'] += f"--quit-if-one-screen"
+
+
     #host = host.removeprefix("https://").removeprefix("http://").split(":")[0]
+    # 1. Process the BikeReg CSV file
+    with AutoPagerEx(stderr=args.stderr, stderrdup=args.stderrdup, line_buffering=autopage.line_buffer_from_input()) as (sys.stdout, sys.stderr):
+        gprint('0. ---------------------------------')
+        gprint('0. ---------------------------------')
+        gprint('0. ---------------------------------')
+        gprint('0. ---------------------------------')
 
-    sql = RaceDBSQL(host)
-    racedb = RaceDB(host=host, username=username, password=password,)
+        sql = RaceDBSQL(host)
+        racedb = RaceDB(host=host, username=username, password=password,)
 
-    # Determine categories from either start_date (competition) or category_format
-    categories = []
-    if start_date:
-        comp, categories = sql.find_competition_categories(date=start_date)
-        if not comp:
-            print(f"Error: competition not found for start_date {start_date}", file=sys.stderr)
+        # Determine categories from either start_date (competition) or category_format
+        categories = []
+        if start_date:
+            comp, categories = sql.find_competition_categories(date=start_date)
+            if not comp:
+                print(f"Error: competition not found for start_date {start_date}", file=sys.stderr)
+                sys.exit(1)
+            print(f"Using categories from competition '{comp.get('name')}' on {comp.get('start_date')}", file=sys.stdout)
+        elif category_format:
+            fmt, categories = sql.find_categories_for_format_name(category_format)
+            if not fmt:
+                print(f"Error: category_format '{category_format}' not found", file=sys.stderr)
+                sys.exit(1)
+            print(f"Using categories from format '{fmt.get('name')}'", file=sys.stdout)
+        else:
+            print("Error: must specify either --start_date or --category_format", file=sys.stderr)
             sys.exit(1)
-        print(f"Using categories from competition '{comp.get('name')}' on {comp.get('start_date')}", file=sys.stdout)
-    elif category_format:
-        fmt, categories = sql.find_categories_for_format_name(category_format)
-        if not fmt:
-            print(f"Error: category_format '{category_format}' not found", file=sys.stderr)
+        print(f"Categories: {categories}", file=sys.stdout)
+
+        # Optionally show a quick summary of fetched categories
+        if categories:
+            codes = [ (c.get('code'), c.get('gender')) for c in categories ]
+            print(f"Loaded {len(categories)} categories: {codes}", file=sys.stdout)
+
+        ccn = GetCCN()
+        #catmap = CategoryMap()
+
+        # Determine categories and format name for CatMap
+        fmt_name = None
+        # Determine categories from either start_date (competition) or category_format
+        categories = []
+        if start_date:
+            comp, categories = sql.find_competition_categories(date=start_date)
+            if not comp:
+                print(f"Error: competition not found for start_date {start_date}", file=sys.stderr)
+                sys.exit(1)
+            fmt_record = sql.find_category_format_by_id(comp.get('category_format_id')) if isinstance(comp, dict) else None
+            fmt_name = fmt_record.get('name') if fmt_record else None
+            print(f"Using categories from competition '{comp.get('name')}' on {comp.get('start_date')}", file=sys.stdout)
+        elif category_format:
+            fmt_name = category_format
+            fmt, categories = sql.find_categories_for_format_name(category_format)
+            if not fmt:
+                print(f"Error: category_format '{category_format}' not found", file=sys.stderr)
+                sys.exit(1)
+            print(f"Using categories from format '{fmt.get('name')}'", file=sys.stdout)
+        else:
+            print("Error: must specify either --start_date or --category_format", file=sys.stderr)
             sys.exit(1)
-        print(f"Using categories from format '{fmt.get('name')}'", file=sys.stdout)
-    else:
-        print("Error: must specify either --start_date or --category_format", file=sys.stderr)
-        sys.exit(1)
-    print(f"Categories: {categories}", file=sys.stdout)
 
-    # Optionally show a quick summary of fetched categories
-    if categories:
-        codes = [ (c.get('code'), c.get('gender')) for c in categories ]
-        print(f"Loaded {len(categories)} categories: {codes}", file=sys.stdout)
+        # Instantiate organizer category alias map for the selected format
+        catmap = CatMap(fmt_name) if fmt_name else None
 
-    ccn = GetCCN()
-    #catmap = CategoryMap()
+        # Optionally show a quick summary of fetched categories
+        if categories:
+            codes = [ (c.get('code'), c.get('gender')) for c in categories ]
+            #print(f"Loaded {len(categories)} categories: {codes}", file=sys.stdout)
+            for k, v in catmap.map.items():
+                print(f"  Alias: '{k}' => '{v}'", file=sys.stdout)
 
-    # Determine categories and format name for CatMap
-    fmt_name = None
-    # Determine categories from either start_date (competition) or category_format
-    categories = []
-    if start_date:
-        comp, categories = sql.find_competition_categories(date=start_date)
-        if not comp:
-            print(f"Error: competition not found for start_date {start_date}", file=sys.stderr)
-            sys.exit(1)
-        fmt_record = sql.find_category_format_by_id(comp.get('category_format_id')) if isinstance(comp, dict) else None
-        fmt_name = fmt_record.get('name') if fmt_record else None
-        print(f"Using categories from competition '{comp.get('name')}' on {comp.get('start_date')}", file=sys.stdout)
-    elif category_format:
-        fmt_name = category_format
-        fmt, categories = sql.find_categories_for_format_name(category_format)
-        if not fmt:
-            print(f"Error: category_format '{category_format}' not found", file=sys.stderr)
-            sys.exit(1)
-        print(f"Using categories from format '{fmt.get('name')}'", file=sys.stdout)
-    else:
-        print("Error: must specify either --start_date or --category_format", file=sys.stderr)
-        sys.exit(1)
-
-    # Instantiate organizer category alias map for the selected format
-    catmap = CatMap(fmt_name) if fmt_name else None
-
-    # Optionally show a quick summary of fetched categories
-    if categories:
-        codes = [ (c.get('code'), c.get('gender')) for c in categories ]
-        #print(f"Loaded {len(categories)} categories: {codes}", file=sys.stdout)
-        for k, v in catmap.map.items():
-            print(f"  Alias: '{k}' => '{v}'", file=sys.stdout)
-
-    bikereg = GetBikeReg(racedb=racedb, sql=sql, ccn=ccn, catmap=catmap, username=username, password=password, csvfile=csvfile)
-    # Provide allowed category codes for purchase detection
-    if categories:
-        bikereg.allowed_codes = { c.get('code') for c in categories if isinstance(c, dict) and c.get('code') }
+        bikereg = GetBikeReg(racedb=racedb, sql=sql, ccn=ccn, catmap=catmap, username=username, password=password, csvfile=csvfile)
+        # Provide allowed category codes for purchase detection
+        if categories:
+            bikereg.allowed_codes = { c.get('code') for c in categories if isinstance(c, dict) and c.get('code') }
+        gprint('0. ---------------------------------')
+        gprint('0. ---------------------------------')
+        gprint('0. ---------------------------------')
+        gprint('0. ---------------------------------')
 
     #if False:
     #    os.environ['LESS'] += f"--quit-if-one-screen"
@@ -359,6 +393,7 @@ def main():
         gprint('2. Finished Processing Registrations:', csvfile, file=sys.stdout)
         gprint('2. ---------------------------------')
 
+    #exit()
     # XXX
     #exit()
     # #3. Upload the license holders
