@@ -24,9 +24,13 @@ class BikeRegCSV:
                     data = json.load(f)
                 # normalize keys to lowercase for case-insensitive matching
                 self.aliases = { (k or '').lower(): v for k, v in data.items() }
-                print(f"Loaded {len(self.aliases)} BikeReg aliases from {alias_path}", file=sys.stderr)
+                print(f"Loaded {len(self.aliases)} BikeReg aliases from {alias_path}", file=sys.stdout)
         except Exception as e:
-            print(f"Warning: failed to load BikeReg aliases: {e}", file=sys.stderr)
+            print(f"Warning: failed to load BikeReg aliases: {e}", file=sys.stdout)
+            exit()
+        print(f"BikeRegCSV Aliases:", file=sys.stdout)
+        for k, v in self.aliases.items():
+            print(f"  {k} -> {v}", file=sys.stdout)
 
     def check_dob(self, dob):
         try:
