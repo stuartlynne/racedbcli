@@ -58,7 +58,8 @@ class RaceDBSQL:
         self.debug = False
 
     def log_debug(self, message):
-        print(message, file=sys.stderr)
+        if self.debug:
+            print(message, file=sys.stderr)
 
     def log_sql(self, query, params, debug=True):
         """Logs the fully expanded SQL query with parameters."""
