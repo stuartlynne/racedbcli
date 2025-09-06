@@ -14,7 +14,7 @@ import autopage
 # fixLess=False     - do not apply fix to the LESS environment variable
 
 class AutoPagerEx(autopage.AutoPager):
-    def __init__(self, stderr=False, stderrdup=False, fixLess=True, **kws):
+    def __init__(self, stderr=False, stderrdup=False, fixLess=False, **kws):
         self.stderr = stderr
         self.stderrdup = stderrdup
         self.fixLess = fixLess
