@@ -55,6 +55,16 @@ class RaceDB:
         self.license_holder_data = []
         self.purchases = {}
         self.registration_data = []
+        self.stats = {
+                'registrations': 0,
+                'license_check': 0,
+                'license_missing': 0,
+                'allowed': 0,
+                'uci_id': 0,
+                'men': 0,
+                'women': 0,
+                'unknown': 0,
+        }
         print('RaceDB:', self.base_url, self.username, self.password, file=sys.stdout)
         self.session = session_login(self.base_url, self.username, self.password)
 
@@ -156,7 +166,15 @@ class RaceDB:
             'Note': note,
             'Category': category,
         })
-        if allowed:
+        self.stats['registrations'] += 1
+        self.stats['license_check'] += 1 if license_check else 0
+        self.stats['license_missing'] += 1 if not license_number or license_number == "" else 0
+        self.stats['allowed'] += 1 if allowed else 0
+        self.stats['uci_id'] += 1 if uci_id and uci_id != "" else 0
+        self.stats['men'] += 1 if gender == 'M' else 0
+        self.stats['women'] += 1 if gender == 'F' else 0
+        self.stats['unknown'] += 1 if gender not in['M', 'F'] else 0
+        if license_check:
             print('  Registration data: %s' % (
                 [self.registration_data[-1][k] for k in ['First Name', 'Last Name', 'License', 'License Check', 
                  'UCI ID', 'Category', 'Note']]), 
@@ -202,6 +220,11 @@ class RaceDB:
                 "clear_existing": "on",
                 "ok-submit": "OK",
             },)
+
+        print("*20")
+        print("Registration stats:", file=sys.stdout)
+        for stat, value in self.stats.items():
+            print(f"  {stat}: {value}", file=sys.stdout)
 
     def new_competition(self, template_date=None, start_date=None, new_name=None, replace=True):
 
