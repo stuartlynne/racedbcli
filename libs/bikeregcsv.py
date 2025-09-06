@@ -6,35 +6,6 @@ import json
 import csv
 from datetime import datetime
 
-BikeReg_Aliases = { 
-    'brown, matthew, 1969-04-17': ('brown', 'matt', '1969-04-17', None),
-    'martin, rich, 1972-03-17': ('martin', 'richard', '1972-03-17', None),
-    'mallie, johannes, 1987-10-20': ('mallie', 'johannes daniel', '1987-10-20', None),
-    'morin, ben, 2007-08-27': ('morin', 'ben', '2007-08-27', '00000000000'),
-    #'grund, sebastian, 2009-08-23': ('grund', 'sebastain', '2009-08-23', '00000000000'), 
-    "flower, thomas, 1981-05-09": ('flower', 'tom', '1981-05-09', '00000000000'),
-    "mousseau, steve, 1984-11-28": ('mousseau', 'steven', '1984-11-28', '00000000000'),
-    "timmer, alex, 1989-12-18": ('timmer', 'alexander', '1989-12-18', '00000000000'),
-    "hickling, cam, 2003-05-12": ('hickling', 'cameron', '2003-05-12', '00000000000'),
-    "treen, gordie, 2008-11-02": ('treen', 'gordon', '2008-11-02', '00000000000'),
-    "patterson, cole, 1987-07-06": ('patterson', 'cole', '1995-07-06', '00000000000'),
-    "davsion, james r, 1972-04-22": ('davison', 'james r', '1972-04-22', '00000000000'),
-    "rubuliak, jenni, 1973-04-24": ('rubuliak', 'jen', '1973-04-24', '00000000000'),
-    "ben shooshan, noam, 2009-02-13": ('ben-shooshan', 'noam', '2009-02-13', '00000000000'),
-    "ben shooshan, shaqed, 2014-03-02": ('ben-shooshan', 'shaqed', '2014-03-02', '00000000000'),
-    "imlach, brittany, 1989-03-07": ('imlach', 'brittany georgia', '1989-03-07', '00000000000'),
-    "kelley, xavier, 1975-04-28": ('kelley', 'xavier', '2008-02-27', '00000000000'),
-    "ramirez, marklouie, 2004-09-27": ('ramirez', 'mark louie', '2004-09-27', '00000000000'),
-    "ivany, carsten ivany, 1981-01-25": ('ivany', 'carsten', '1981-01-25', '00000000000'),
-    "hutchinson, alexander, 1993-06-20": ('hutchinson', 'alex', '1993-06-20', '00000000000'),
-    "o'mahony, david, 1981-04-15": ("o'mahony", 'dave', '1981-04-15', '00000000000'),
-    "murison, alex, 1992-02-04": ('murison', 'alexander', '1992-02-04', '00000000000'),
-    "wood, dan, 1972-10-20": ('wood', 'daniel', '1972-10-20', ''),
-    "birkenbuel, james c, 1974-03-07": ('birkenbuel', 'james cameron', '1974-03-07', '10051488490'),
-
-
-}
-
 # read BikeReg CSV file
 # return next row.
 # We maintain an alias list to map names to the correct spelling, and DoB
@@ -43,6 +14,19 @@ class BikeRegCSV:
     def __init__(self, csvFileName=None, alias=None, ):
         self.csvFileName = csvFileName
         self.alias = alias
+        # Load aliases from catmap/bikereg_aliases.json if present
+        self.aliases = {}
+        try:
+            base_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'catmap')
+            alias_path = os.path.join(base_dir, 'bikereg_aliases.json')
+            if os.path.exists(alias_path):
+                with open(alias_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                # normalize keys to lowercase for case-insensitive matching
+                self.aliases = { (k or '').lower(): v for k, v in data.items() }
+                print(f"Loaded {len(self.aliases)} BikeReg aliases from {alias_path}", file=sys.stderr)
+        except Exception as e:
+            print(f"Warning: failed to load BikeReg aliases: {e}", file=sys.stderr)
 
     def check_dob(self, dob):
         try:
@@ -80,8 +64,9 @@ class BikeRegCSV:
                 row['Date of Birth'] = dob
                 lookup = f"{row['Last Name']}, {row['First Name']}, {dob}".lower()
                 print(f"Registrant[{i}]: lookup {lookup} Alias check", file=sys.stdout)
-                if lookup in BikeReg_Aliases:
-                    last_name, first_name, dob, uci_id = BikeReg_Aliases[lookup]
+                if lookup in self.aliases:
+                    # Alias tuple: (last_name, first_name, dob, uci_id)
+                    last_name, first_name, dob, uci_id = self.aliases[lookup]
                     row['Last Name'] = last_name
                     row['First Name'] = first_name
                     row['Date of Birth'] = dob
@@ -98,4 +83,3 @@ if __name__ == "__main__":
 
     for i, row in br.get_next():
         print(f"{i}: {row}")
-
