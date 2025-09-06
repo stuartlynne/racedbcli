@@ -82,6 +82,12 @@ class GetCCN:
             #print('Result: ', result)
             #print('-----------------------------------')
             for membership in result.get("lookup_identity_memberships", []):
+                # Helper to normalize and validate UCI ID
+                def _normalize_uci(uci: str | None) -> str | None:
+                    if not uci:
+                        return None
+                    s = str(uci).replace(" ", "")
+                    return s if (len(s) == 11 and s.isdigit()) else None
                 person = {
                     "first_name": membership["identity_snapshot"]["first_name"],
                     "last_name": membership["identity_snapshot"]["last_name"],
@@ -89,7 +95,7 @@ class GetCCN:
 
                     "membership": membership["membership_organization"]["name"],
 
-                    "uci_id": next((num["generated_number_value"] for num in membership["generated_numbers"] if num["number_title"] == "UCI ID"), None),
+                    "uci_id": _normalize_uci(next((num["generated_number_value"] for num in membership["generated_numbers"] if num["number_title"] == "UCI ID"), None)),
                     "license_number": next((num["generated_number_value"] for num in membership["generated_numbers"] if num["number_title"] in ["License Number", "Provincial Membership Number"]), None),
 
                     "license_type": membership["purchased_groups"][0]["name"] if membership.get("purchased_groups") else None,
@@ -100,10 +106,8 @@ class GetCCN:
                             for node in group.get("nodes", [])
                         ]
                     },
-
-
                 }
-                person['UCI License'] = person['license_type'].startswith('UCI RACE')
+                person['UCI License'] = person['license_type'].startswith('UCI RACE') if person.get('license_type') else False
             #print('-----------------------------------')
             #print('Person: ', person)
             #print('-----------------------------------')
