@@ -77,6 +77,7 @@ def normalize_ranges(range_list: List[str]) -> str:
 def download_xlsx(db: RaceDBSQL, comp: Dict, output_path: str) -> None:
     try:
         from openpyxl import Workbook
+        from openpyxl.utils import get_column_letter
     except Exception as e:
         raise SystemExit(f"openpyxl not available: {e}")
 
@@ -110,6 +111,14 @@ def download_xlsx(db: RaceDBSQL, comp: Dict, output_path: str) -> None:
     ws.append(header)
     for row in data_rows:
         ws.append(row)
+
+    # Cosmetic: set column widths (~30), freeze top row, and enable autofilter
+    max_cols = 1 + max_ranges
+    for col_idx in range(1, max_cols + 1):
+        col_letter = get_column_letter(col_idx)
+        ws.column_dimensions[col_letter].width = 30
+    ws.freeze_panes = "A2"
+    ws.auto_filter.ref = ws.dimensions
 
     wb.save(output_path)
     print(f"Wrote {ws.max_row} rows to {output_path}")
