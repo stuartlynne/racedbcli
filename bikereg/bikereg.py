@@ -297,12 +297,12 @@ def main():
 
         # Determine categories from either start_date (competition) or category_format
         categories = []
-        if start_date:
-            comp, categories = sql.find_competition_categories(date=start_date)
-            if not comp:
-                print(f"Error: competition not found for start_date {start_date}", file=sys.stderr)
-                sys.exit(1)
-            print(f"Using categories from competition '{comp.get('name')}' on {comp.get('start_date')}", file=sys.stdout)
+    if start_date:
+        comp, categories = sql.find_competition_categories(date=start_date)
+        if not comp:
+            print(f"Error: competition not found for start_date {start_date}", file=sys.stderr)
+            sys.exit(1)
+        print(f"Using categories from competition '{comp.get('name')}' on {comp.get('start_date')} (discipline: {comp.get('discipline_name')})", file=sys.stdout)
         elif category_format:
             fmt, categories = sql.find_categories_for_format_name(category_format)
             if not fmt:
@@ -326,14 +326,14 @@ def main():
         fmt_name = None
         # Determine categories from either start_date (competition) or category_format
         categories = []
-        if start_date:
-            comp, categories = sql.find_competition_categories(date=start_date)
-            if not comp:
-                print(f"Error: competition not found for start_date {start_date}", file=sys.stderr)
-                sys.exit(1)
-            fmt_record = sql.find_category_format_by_id(comp.get('category_format_id')) if isinstance(comp, dict) else None
-            fmt_name = fmt_record.get('name') if fmt_record else None
-            print(f"Using categories from competition '{comp.get('name')}' on {comp.get('start_date')}", file=sys.stdout)
+    if start_date:
+        comp, categories = sql.find_competition_categories(date=start_date)
+        if not comp:
+            print(f"Error: competition not found for start_date {start_date}", file=sys.stderr)
+            sys.exit(1)
+        fmt_record = sql.find_category_format_by_id(comp.get('category_format_id')) if isinstance(comp, dict) else None
+        fmt_name = fmt_record.get('name') if fmt_record else None
+        print(f"Using categories from competition '{comp.get('name')}' on {comp.get('start_date')} (discipline: {comp.get('discipline_name')})", file=sys.stdout)
         elif category_format:
             fmt_name = category_format
             fmt, categories = sql.find_categories_for_format_name(category_format)
