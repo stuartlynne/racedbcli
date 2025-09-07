@@ -81,17 +81,15 @@ def download_xlsx(db: RaceDBSQL, comp: Dict, output_path: str) -> None:
         raise SystemExit(f"openpyxl not available: {e}")
 
     rows = fetch_categorynumbers(db, comp["id"])
-    # Track codes we wrote from existing categorynumbers
-    present_codes = []
+    # Collect rows first to determine header range count
+    present_codes: List[str] = []
+    data_rows: List[List[str]] = []
 
-    wb = Workbook()
-    ws = wb.active
-    # No header per example; write rows as Category, Range1, Range2, ...
     for r in rows:
         code = r.get("category_code") if isinstance(r, dict) else r[2]
         range_str = r.get("range_str") if isinstance(r, dict) else r[1]
         ranges = [p.strip() for p in str(range_str or "").split(",") if p.strip()]
-        ws.append([code] + ranges)
+        data_rows.append([code] + ranges)
         present_codes.append(code)
 
     # Ensure a line for each category in the format, even if no ranges
@@ -99,7 +97,19 @@ def download_xlsx(db: RaceDBSQL, comp: Dict, output_path: str) -> None:
     for cat in all_cats:
         code = cat.get("code") if isinstance(cat, dict) else cat[1]
         if code not in present_codes:
-            ws.append([code])
+            data_rows.append([code])
+
+    # Determine header length (max number of ranges across rows)
+    max_ranges = 0
+    for row in data_rows:
+        max_ranges = max(max_ranges, max(0, len(row) - 1))
+
+    wb = Workbook()
+    ws = wb.active
+    header = ["Category"] + [f"Range{i}" for i in range(1, max_ranges + 1)]
+    ws.append(header)
+    for row in data_rows:
+        ws.append(row)
 
     wb.save(output_path)
     print(f"Wrote {ws.max_row} rows to {output_path}")
