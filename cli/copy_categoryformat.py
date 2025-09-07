@@ -13,7 +13,13 @@ if ROOT not in sys.path:
 from libs.racedbsql import RaceDBSQL  # type: ignore
 
 
-def copy_category_format(db: RaceDBSQL, src_name: str, dst_name: str, overwrite: bool = False) -> int:
+def copy_category_format(
+    db: RaceDBSQL,
+    src_name: str,
+    dst_name: str,
+    overwrite: bool = False,
+    description: str | None = None,
+) -> int:
     # Lookup source format
     db.cur_execute(
         f"Lookup source category format '{src_name}'",
@@ -39,18 +45,19 @@ def copy_category_format(db: RaceDBSQL, src_name: str, dst_name: str, overwrite:
     # Create destination format if not present or overwrite requested
     if dst_existing and overwrite:
         dst_id = dst_existing["id"]
-        # Optionally update description to match src
+        # Update description to provided value, otherwise match source
+        new_desc = description if description is not None else src_fmt.get("description")
         db.cur_execute(
             f"Update destination format description for '{dst_name}'",
             "UPDATE core_categoryformat SET description = %s WHERE id = %s;",
-            (src_fmt.get("description"), dst_id),
+            (new_desc, dst_id),
             debug=False,
         )
     else:
         db.cur_execute(
             f"Create destination category format '{dst_name}'",
             "INSERT INTO core_categoryformat (name, description) VALUES (%s, %s) RETURNING id;",
-            (dst_name, src_fmt.get("description")),
+            (dst_name, description if description is not None else src_fmt.get("description")),
             debug=False,
         )
         row = db.cur.fetchone()
@@ -88,14 +95,24 @@ def main():
     p = argparse.ArgumentParser(description="Copy core_categoryformat and its categories to a new format name")
     p.add_argument("src", help="Source core_categoryformat name (e.g., lmcx2024)")
     p.add_argument("dst", help="Destination core_categoryformat name (e.g., lmcx2025)")
+    p.add_argument("desc", nargs="?", help="Optional description for the new format (defaults to source description)")
     p.add_argument("--host", default="localhost", help="Database host (e.g., localhost or 192.168.1.10)")
     p.add_argument("--overwrite", action="store_true", help="Overwrite destination description and append categories")
     args = p.parse_args()
 
     db = RaceDBSQL(host=args.host)
     try:
-        inserted = copy_category_format(db, args.src, args.dst, overwrite=args.overwrite)
-        print(f"Copied {inserted} categories from '{args.src}' to '{args.dst}'")
+        inserted = copy_category_format(
+            db,
+            args.src,
+            args.dst,
+            overwrite=args.overwrite,
+            description=args.desc,
+        )
+        print(
+            f"Copied {inserted} categories from '{args.src}' to '{args.dst}'"
+            + (f" with custom description" if args.desc else "")
+        )
     except SystemExit as e:
         print(str(e), file=sys.stderr)
         sys.exit(1)
@@ -107,4 +124,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
