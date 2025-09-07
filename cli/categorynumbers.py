@@ -243,10 +243,10 @@ def main():
     common.add_argument("--date", default=None, help="Competition date (YYYY-MM-DD)")
 
     dl = sub.add_parser("download", parents=[common], help="Download category numbers to XLSX")
-    dl.add_argument("--output", required=False, help="Output XLSX path (defaults to sanitized competition name)")
+    dl.add_argument("--xlsx", required=False, help="XLSX file path (defaults to sanitized competition name)")
 
     ul = sub.add_parser("upload", parents=[common], help="Upload category numbers from XLSX")
-    ul.add_argument("--input", required=True, help="Input XLSX path")
+    ul.add_argument("--xlsx", required=False, help="XLSX file path (defaults to sanitized competition name)")
     ul.add_argument("--replace", action="store_true", help="Replace all existing numbers for the competition")
     ul.add_argument("--dry-run", action="store_true", help="Validate and show changes without writing")
 
@@ -256,10 +256,11 @@ def main():
     comp = find_competition(db, args.name, args.date)
 
     if args.cmd == "download":
-        out = args.output or f"{sanitize_filename(comp.get('name','competition'))}.xlsx"
-        download_xlsx(db, comp, out)
+        xlsx = args.xlsx or f"{sanitize_filename(comp.get('name','competition'))}.xlsx"
+        download_xlsx(db, comp, xlsx)
     elif args.cmd == "upload":
-        upload_xlsx(db, comp, args.input, replace=args.replace, dry_run=args.dry_run)
+        xlsx = args.xlsx or f"{sanitize_filename(comp.get('name','competition'))}.xlsx"
+        upload_xlsx(db, comp, xlsx, replace=args.replace, dry_run=args.dry_run)
 
 
 if __name__ == "__main__":
