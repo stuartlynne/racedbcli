@@ -135,10 +135,14 @@ def upload_xlsx(db: RaceDBSQL, comp: Dict, input_path: str, replace: bool = Fals
 
     # Build code->ranges mapping (normalized) and group by ranges
     range_to_codes: Dict[str, List[str]] = {}
-    for row in ws.iter_rows(values_only=True):
+    for idx, row in enumerate(ws.iter_rows(values_only=True), start=1):
         if not row or not row[0]:
             continue
-        code = str(row[0]).strip()
+        first = str(row[0]).strip()
+        # Skip header row if present
+        if idx == 1 and first.lower() == 'category':
+            continue
+        code = first
         ranges = [str(c).strip() for c in row[1:] if c is not None and str(c).strip()]
         if not ranges:
             continue
@@ -166,6 +170,18 @@ def upload_xlsx(db: RaceDBSQL, comp: Dict, input_path: str, replace: bool = Fals
     inserted_cn = 0
     inserted_links = 0
     for range_str, codes in range_to_codes.items():
+        # Determine valid category IDs for this range
+        valid_cat_ids: List[int] = []
+        for code in codes:
+            cat_id = code_to_id.get(code)
+            if not cat_id:
+                print(f"Warning: unknown category code '{code}' for this format — skipping", file=sys.stderr)
+                continue
+            valid_cat_ids.append(cat_id)
+        # If no valid categories, do not create numbers row
+        if not valid_cat_ids:
+            continue
+
         # Create or find existing numbers row for this competition and range_str
         db.cur_execute(
             "Find existing numbers row",
@@ -187,13 +203,8 @@ def upload_xlsx(db: RaceDBSQL, comp: Dict, input_path: str, replace: bool = Fals
             cn_id = r.get("id") if isinstance(r, dict) else r[0]
             inserted_cn += 1
 
-        # Link to categories
-        for code in codes:
-            cat_id = code_to_id.get(code)
-            if not cat_id:
-                print(f"Warning: unknown category code '{code}' for this format — skipping", file=sys.stderr)
-                continue
-            # Avoid duplicate link
+        # Link to categories, avoiding duplicates
+        for cat_id in valid_cat_ids:
             db.cur_execute(
                 "Check existing link",
                 "SELECT 1 FROM core_categorynumbers_categories WHERE categorynumbers_id = %s AND category_id = %s;",
