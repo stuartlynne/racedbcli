@@ -4,6 +4,7 @@ import sys
 import os
 import argparse
 from typing import Dict, List, Tuple, Optional
+import re
 
 # repo root for libs import
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
@@ -45,6 +46,22 @@ def get_code_to_id(db: RaceDBSQL, format_id: int) -> Dict[str, int]:
     return mapping
 
 
+def fetch_categories_for_format(db: RaceDBSQL, format_id: int) -> List[Dict]:
+    q = "SELECT id, code, sequence FROM core_category WHERE format_id = %s ORDER BY sequence, code;"
+    db.cur_execute("Fetch all categories in format", q, (format_id,), debug=False)
+    return db.cur.fetchall() or []
+
+
+def sanitize_filename(name: str) -> str:
+    # Replace spaces with underscores and remove invalid characters
+    s = name.replace(" ", "_")
+    # Allow letters, digits, underscore, hyphen, dot
+    s = re.sub(r"[^A-Za-z0-9._-]", "", s)
+    # Collapse multiple underscores
+    s = re.sub(r"_+", "_", s)
+    return s or "competition"
+
+
 def normalize_ranges(range_list: List[str]) -> str:
     parts = [p.strip() for p in range_list if str(p).strip()]
     # keep order but deduplicate
@@ -64,6 +81,8 @@ def download_xlsx(db: RaceDBSQL, comp: Dict, output_path: str) -> None:
         raise SystemExit(f"openpyxl not available: {e}")
 
     rows = fetch_categorynumbers(db, comp["id"])
+    # Track codes we wrote from existing categorynumbers
+    present_codes = []
 
     wb = Workbook()
     ws = wb.active
@@ -73,6 +92,14 @@ def download_xlsx(db: RaceDBSQL, comp: Dict, output_path: str) -> None:
         range_str = r.get("range_str") if isinstance(r, dict) else r[1]
         ranges = [p.strip() for p in str(range_str or "").split(",") if p.strip()]
         ws.append([code] + ranges)
+        present_codes.append(code)
+
+    # Ensure a line for each category in the format, even if no ranges
+    all_cats = fetch_categories_for_format(db, comp["category_format_id"])
+    for cat in all_cats:
+        code = cat.get("code") if isinstance(cat, dict) else cat[1]
+        if code not in present_codes:
+            ws.append([code])
 
     wb.save(output_path)
     print(f"Wrote {ws.max_row} rows to {output_path}")
@@ -186,7 +213,7 @@ def main():
     common.add_argument("--date", default=None, help="Competition date (YYYY-MM-DD)")
 
     dl = sub.add_parser("download", parents=[common], help="Download category numbers to XLSX")
-    dl.add_argument("--output", required=True, help="Output XLSX path")
+    dl.add_argument("--output", required=False, help="Output XLSX path (defaults to sanitized competition name)")
 
     ul = sub.add_parser("upload", parents=[common], help="Upload category numbers from XLSX")
     ul.add_argument("--input", required=True, help="Input XLSX path")
@@ -199,11 +226,11 @@ def main():
     comp = find_competition(db, args.name, args.date)
 
     if args.cmd == "download":
-        download_xlsx(db, comp, args.output)
+        out = args.output or f"{sanitize_filename(comp.get('name','competition'))}.xlsx"
+        download_xlsx(db, comp, out)
     elif args.cmd == "upload":
         upload_xlsx(db, comp, args.input, replace=args.replace, dry_run=args.dry_run)
 
 
 if __name__ == "__main__":
     main()
-
