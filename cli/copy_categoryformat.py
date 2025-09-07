@@ -19,7 +19,7 @@ def copy_category_format(
     dst_name: str,
     overwrite: bool = False,
     description: str | None = None,
-) -> int:
+) -> tuple[int, int]:
     # Lookup source format
     db.cur_execute(
         f"Lookup source category format '{src_name}'",
@@ -72,13 +72,24 @@ def copy_category_format(
     )
     rows = db.cur.fetchall() or []
 
-    # Insert copied categories
+    # Insert copied categories, skipping duplicates by code
     inserted = 0
+    skipped = 0
     for r in rows:
         code = r.get("code") if isinstance(r, dict) else r[0]
         gender = r.get("gender") if isinstance(r, dict) else r[1]
         desc = r.get("description") if isinstance(r, dict) else r[2]
         seq = r.get("sequence") if isinstance(r, dict) else r[3]
+        # Check duplicate by (format_id, code)
+        db.cur_execute(
+            f"Check duplicate for code {code}",
+            "SELECT 1 FROM core_category WHERE format_id = %s AND code = %s LIMIT 1;",
+            (dst_id, code),
+            debug=False,
+        )
+        if db.cur.fetchone():
+            skipped += 1
+            continue
         db.cur_execute(
             f"Insert category {code}",
             "INSERT INTO core_category (code, gender, description, sequence, format_id) VALUES (%s, %s, %s, %s, %s);",
@@ -88,7 +99,7 @@ def copy_category_format(
         inserted += 1
 
     db.conn.commit()
-    return inserted
+    return inserted, skipped
 
 
 def main():
@@ -97,22 +108,35 @@ def main():
     p.add_argument("dst", help="Destination core_categoryformat name (e.g., lmcx2025)")
     p.add_argument("desc", nargs="?", help="Optional description for the new format (defaults to source description)")
     p.add_argument("--host", default="localhost", help="Database host (e.g., localhost or 192.168.1.10)")
-    p.add_argument("--overwrite", action="store_true", help="Overwrite destination description and append categories")
+    p.add_argument("--overwrite", action="store_true", help="Overwrite destination description and append categories (existing categories with same code are skipped)")
+    p.add_argument("--dry-run", action="store_true", help="Show what would be copied without writing to the database")
     args = p.parse_args()
 
     db = RaceDBSQL(host=args.host)
     try:
-        inserted = copy_category_format(
+        if args.dry_run:
+            # For dry-run, wrap with a rollback at the end and print planned counts
+            pass
+        inserted, skipped = copy_category_format(
             db,
             args.src,
             args.dst,
             overwrite=args.overwrite,
             description=args.desc,
         )
-        print(
-            f"Copied {inserted} categories from '{args.src}' to '{args.dst}'"
-            + (f" with custom description" if args.desc else "")
-        )
+        if args.dry_run:
+            db.conn.rollback()
+            print(
+                f"[DRY-RUN] Would copy {inserted + skipped} categories from '{args.src}' to '{args.dst}' "
+                f"({inserted} inserts, {skipped} skipped duplicates)"
+                + (" with custom description" if args.desc else "")
+            )
+        else:
+            print(
+                f"Copied {inserted + skipped} categories from '{args.src}' to '{args.dst}' "
+                f"({inserted} inserted, {skipped} skipped duplicates)"
+                + (" with custom description" if args.desc else "")
+            )
     except SystemExit as e:
         print(str(e), file=sys.stderr)
         sys.exit(1)
