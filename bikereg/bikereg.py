@@ -304,7 +304,8 @@ def main():
                 print(f"Error: competition not found for start_date {start_date}", file=sys.stderr)
                 sys.exit(1)
             print(
-                f"Using categories from competition '{comp.get('name')}' on {comp.get('start_date')} (discipline: {comp.get('discipline_name')})",
+                f"Using categories from competition '{comp.get('name')}' on {comp.get('start_date')} "
+                f"(discipline: {comp.get('discipline_name')}, class: {comp.get('race_class_name')})",
                 file=sys.stdout,
             )
             fmt_record = (

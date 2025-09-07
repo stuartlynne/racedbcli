@@ -163,14 +163,17 @@ class RaceDBSQL:
     def find_competition(self, name=None, date=None):
         """Find a competition by exact name and/or start_date.
 
-        Returns a dict (id, name, long_name, start_date, category_format_id, discipline_name) or None.
+        Returns a dict (id, name, long_name, start_date, category_format_id, discipline_name, race_class_name) or None.
         """
         print(f"find_competition: {name} {date}", file=sys.stdout)
         try:
             if name and date:
                 competition_query = (
-                    "SELECT c.id, c.name, c.long_name, c.start_date, c.category_format_id, d.name AS discipline_name "
-                    "FROM core_competition c LEFT JOIN core_discipline d ON c.discipline_id = d.id "
+                    "SELECT c.id, c.name, c.long_name, c.start_date, c.category_format_id, "
+                    "d.name AS discipline_name, rc.name AS race_class_name "
+                    "FROM core_competition c "
+                    "LEFT JOIN core_discipline d ON c.discipline_id = d.id "
+                    "LEFT JOIN core_raceclass rc ON c.race_class_id = rc.id "
                     "WHERE c.name = %s AND c.start_date = %s;"
                 )
                 self.cur_execute(
@@ -181,8 +184,11 @@ class RaceDBSQL:
                 )
             elif name:
                 competition_query = (
-                    "SELECT c.id, c.name, c.long_name, c.start_date, c.category_format_id, d.name AS discipline_name "
-                    "FROM core_competition c LEFT JOIN core_discipline d ON c.discipline_id = d.id "
+                    "SELECT c.id, c.name, c.long_name, c.start_date, c.category_format_id, "
+                    "d.name AS discipline_name, rc.name AS race_class_name "
+                    "FROM core_competition c "
+                    "LEFT JOIN core_discipline d ON c.discipline_id = d.id "
+                    "LEFT JOIN core_raceclass rc ON c.race_class_id = rc.id "
                     "WHERE c.name = %s;"
                 )
                 self.cur_execute(
@@ -190,8 +196,11 @@ class RaceDBSQL:
                 )
             elif date:
                 competition_query = (
-                    "SELECT c.id, c.name, c.long_name, c.start_date, c.category_format_id, d.name AS discipline_name "
-                    "FROM core_competition c LEFT JOIN core_discipline d ON c.discipline_id = d.id "
+                    "SELECT c.id, c.name, c.long_name, c.start_date, c.category_format_id, "
+                    "d.name AS discipline_name, rc.name AS race_class_name "
+                    "FROM core_competition c "
+                    "LEFT JOIN core_discipline d ON c.discipline_id = d.id "
+                    "LEFT JOIN core_raceclass rc ON c.race_class_id = rc.id "
                     "WHERE c.start_date = %s;"
                 )
                 self.cur_execute(
@@ -281,7 +290,7 @@ class RaceDBSQL:
         """Find categories for a competition identified by name and/or date.
 
         Returns tuple (competition_record, categories_list). If not found, returns (None, []).
-        The competition_record includes 'discipline_name' if available.
+        The competition_record includes 'discipline_name' and 'race_class_name' if available.
         """
         comp = self.find_competition(name=name, date=date)
         if not comp:
