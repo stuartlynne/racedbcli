@@ -5,6 +5,7 @@ import os
 import io
 import json
 import autopage, argparse
+from enum import Enum
 import traceback
 #import argparse
 import requests
@@ -24,6 +25,7 @@ from libs.ccn import GetCCN
 from libs.catmap import CatMap
 from libs.lib import gprint, yprint
 from cli.competition import create_competition_from_template
+from enum import Enum
 
 # This script will process a BikeReg CSV file to load into RaceDB competition.
 #
@@ -34,18 +36,50 @@ from cli.competition import create_competition_from_template
 # 5. Upload the registrations
 # 
 
+class LicenseCheck:
+    class LicenseCheckLevel(Enum):
+        no_license_check = 0
+        club_license_check = 1
+        regional_license_check = 2
+        regional_champion_license_check = 3
+
+    @staticmethod
+    def level_for_race_class(race_class: str | None) -> "LicenseCheck.LicenseCheckLevel":
+        if not race_class:
+            return LicenseCheck.LicenseCheckLevel.regional_license_check
+        rc = race_class.strip().lower()
+        if rc.startswith('citizen'):
+            return LicenseCheck.LicenseCheckLevel.no_license_check
+        if rc.startswith('club'):
+            return LicenseCheck.LicenseCheckLevel.club_license_check
+        if rc.startswith('reg. champ') or rc.startswith('regional champ'):
+            return LicenseCheck.LicenseCheckLevel.regional_champion_license_check
+        if rc.startswith('regional'):
+            return LicenseCheck.LicenseCheckLevel.regional_license_check
+        return LicenseCheck.LicenseCheckLevel.regional_license_check
+
+    def __init__(self, race_class: str | None = None):
+        # Map known race classes to a license check level (see above)
+        self.level = self.level_for_race_class(race_class)
+
 
 class GetBikeReg:
-    def __init__(self, racedb=None, ccn=None, sql=None, catmap=None, username=None, password=None, csvfile=None):
+    def __init__(self, racedb=None, ccn=None, sql=None, catmap=None, comp=None, username=None, password=None, csvfile=None):
         self.racedb = racedb
         self.ccn = ccn
         self.sql = sql
         self.catmap = catmap
+        self.comp = comp
         self.username = username
         self.password = password
         self.csvfile = csvfile
         self.bikeregcsv = BikeRegCSV(csvfile)
         self.registrations = []
+
+        # Determine license check level from competition race class (if available)
+        self.license_check = LicenseCheck.level_for_race_class(comp.get('race_class_name') if isinstance(comp, dict) else None)
+
+
         # Per-format organizer label mapping (CatMap instance)
         # and allowed category codes from DB for purchase detection
         self.allowed_codes = None
@@ -312,13 +346,13 @@ def main():
                 sql.find_category_format_by_id(comp.get('category_format_id')) if isinstance(comp, dict) else None
             )
             fmt_name = fmt_record.get('name') if fmt_record else None
-        elif category_format:
-            fmt_name = category_format
-            fmt, categories = sql.find_categories_for_format_name(category_format)
-            if not fmt:
-                print(f"Error: category_format '{category_format}' not found", file=sys.stderr)
-                sys.exit(1)
-            print(f"Using categories from format '{fmt.get('name')}'", file=sys.stdout)
+        #elif category_format:
+        #    fmt_name = category_format
+        #    fmt, categories = sql.find_categories_for_format_name(category_format)
+        #    if not fmt:
+        #        print(f"Error: category_format '{category_format}' not found", file=sys.stderr)
+        #        sys.exit(1)
+        #    print(f"Using categories from format '{fmt.get('name')}'", file=sys.stdout)
         else:
             print("Error: must specify either --start_date or --category_format", file=sys.stderr)
             sys.exit(1)
@@ -344,6 +378,7 @@ def main():
             sql=sql,
             ccn=ccn,
             catmap=catmap,
+            comp=comp,
             username=username,
             password=password,
             csvfile=csvfile,
