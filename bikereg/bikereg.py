@@ -78,6 +78,7 @@ class GetBikeReg:
 
         # Determine license check level from competition race class (if available)
         self.license_check = LicenseCheck.level_for_race_class(comp.get('race_class_name') if isinstance(comp, dict) else None)
+        print(f"Determined license check level: {self.license_check.name}", file=sys.stdout)
 
 
         # Per-format organizer label mapping (CatMap instance)
@@ -263,7 +264,17 @@ class GetBikeReg:
             print('  Licenses:', licenses, file=sys.stderr)
             print(f"  Requested: {requested_category}", file=sys.stderr)
 
-            if requested_category not in allowed_categories:
+            #self.license_check
+            #no_license_check = 0
+            #club_license_check = 1
+            #regional_license_check = 2
+            #regional_champion_license_check = 3
+            #self.license_check = LicenseCheck.level_for_race_class(comp.get('race_class_name') if isinstance(comp, dict) else None)
+        
+            check_allowed = self.license_check in [LicenseCheck.LicenseCheckLevel.regional_license_check, LicenseCheck.LicenseCheckLevel.regional_champion_license_check]
+
+            if requested_category not in allowed_categories and check_allowed:
+
                 yprint('  Requested [%s] CATEGORY NOT ALLOWED' % (requested_category), file=sys.stderr)
                 self.racedb.add_registration(first_name=first_name, last_name=last_name, uci_id=uci_id, gender=gender,
                                              category=requested_category, license_number=license_number, license_type=license_type, license_check=False,
