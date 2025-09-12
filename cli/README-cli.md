@@ -55,6 +55,37 @@ download_participants(sql, racedb, competition['id'], filename=None)
 Defines:
 - download_participants
 
+### findcategories.py
+Extract categories from a registration CSV (BikeReg or CCN), then create or merge a JSON label→[category, gender] map.
+
+Modes:
+- One-arg: print mapping to stdout
+- Two-arg (format, CSV): `format CSV` → writes to `catmap/<format>.json`
+- Two-arg (CSV, output): `CSV output.json` → writes to the given JSON path (creates if missing)
+
+Column selection (required):
+- `--bikereg` uses `Category Entered / Merchandise Ordered`
+- `--ccnreg` uses `Category`
+
+Validation (optional):
+- Use `--format <name>` or `--name/--date` to load allowed category codes from RaceDB. Unknowns are prefixed with `FIX `.
+
+Examples:
+```
+# Print mapping to stdout (no merge)
+python cli/findcategories.py tmp/registrations.csv --bikereg
+
+# Merge into catmap/<format>.json (creates file if missing)
+python cli/findcategories.py road tmp/registrations.csv --ccnreg
+
+# Merge/create a specific output file
+python cli/findcategories.py tmp/registrations.csv tmp/catmap.json --bikereg
+
+# With validation by competition
+python cli/findcategories.py tmp/registrations.csv tmp/catmap.json --bikereg \
+  --host http://localhost:8080 --name "Event Name" --date 2025-06-01
+```
+
 ### competition.py
 Create or replace a competition in RaceDB using a previous competition as a template.
 
@@ -89,6 +120,5 @@ Use a CCN or Cycling BC license holder list to update RaceDB with current member
 
 ### bikereg.py
 Process a bikereg pre-registration file for a competition.
-
 
 
