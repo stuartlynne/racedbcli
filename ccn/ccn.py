@@ -71,7 +71,7 @@ class GetCCNReg:
         
     def process_ccncsv(self):
         for i, br in self.ccnregcsv.get_next():
-            #print(f"Processing[{i}]: {br}", file=sys.stderr)
+            print(f"Processing[{i}]: {br}", file=sys.stdout)
             first_name = br['First Name']
             last_name = br['Last Name']
             dob = br['Date of Birth']
@@ -211,10 +211,13 @@ class GetCCNReg:
             print(f"  Requested: {requested_category}", file=sys.stderr)
 
             print('  Requested [%s] CATEGORY ALLOWED' % (requested_category), file=sys.stderr)
+            note=f"ALLOWED [{requested_category}] LICENSE {licenses}"
+            if purchases and len(purchases) > 0:
+                note = f"PURCHASED [{', '.join(purchases)}] {note}"
             self.racedb.add_registration(first_name=first_name, last_name=last_name, uci_id=uci_id, gender=gender,
                                          category=requested_category, license_number=license_number, 
                                          license_type=license_type, license_check=license_check,
-                                         note=f"ALLOWED [{requested_category}]\nLicense: {licenses}",
+                                         note=note,
                                          allowed=True)
 
 

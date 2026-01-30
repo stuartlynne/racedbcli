@@ -23,5 +23,10 @@
     "murison, alex, 1992-02-04": ["murison", "alexander", "1992-02-04", "00000000000"],
     "wood, dan, 1972-10-20": ["wood", "daniel", "1972-10-20", ""],
     "birkenbuel, james c, 1974-03-07": ["birkenbuel", "james cameron", "1974-03-07", "10051488490"],
-    "l, p, 2002-05-11": ["balabat", "pinco", "2002-05-11", "00000000000"]
+    "l, p, 2002-05-11": ["balabat", "pinco", "2002-05-11", "00000000000"],
+    "slough, glen, 1989-02-04": ["slough", "glen", "1989-04-02", "00000000000"],
+    "peachey, jodie, 1995-07-03": ["peachey", "jodie", "1995-07-05", "00000000000"],
+    "dhont, michael, 1964-07-06": ["dhont", "michael", "1964-06-07", ""],
+    "rodgers, jacob, 1978-03-03": ["rodgers", "jacob", "1978-03-30", ""],
+    "dummy, end, 1900-01-01": ["dummy", "end", "1900-01-01", "00000000000"]
 }

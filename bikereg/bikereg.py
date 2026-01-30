@@ -198,7 +198,8 @@ class GetBikeReg:
                 self.racedb.new_license_holder(first_name=first_name, last_name=last_name, gender=gender, dob=dob, msg='Not found')
 
             # Normalize category label via per-format CatMap mapping
-            label = br['Category Entered / Merchandise Ordered']
+            #label = br['Category Entered / Merchandise Ordered']
+            label = br['Category Entered']
             print(f"  label: {label} license_check: {br['license_check']}", file=sys.stdout)
             canonical = label
             if self.catmap:

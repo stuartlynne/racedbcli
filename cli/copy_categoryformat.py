@@ -131,6 +131,8 @@ def main():
                 f"({inserted} inserts, {skipped} skipped duplicates)"
                 + (" with custom description" if args.desc else "")
             )
+            print(f"skipped {skipped} existing categories with same code")
+            print(f"inserted {inserted} existing categories with same code")
         else:
             print(
                 f"Copied {inserted + skipped} categories from '{args.src}' to '{args.dst}' "

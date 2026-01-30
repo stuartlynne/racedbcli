@@ -131,8 +131,24 @@ def write_merged_catmap(
     existing = {}
     if os.path.exists(target):
         try:
-            with open(target, "r", encoding="utf-8") as f:
-                data = json.load(f)
+            def _load_lenient_json(path: str):
+                with open(path, "r", encoding="utf-8") as f:
+                    raw = f.read()
+                try:
+                    return json.loads(raw)
+                except Exception:
+                    # Lenient fallback: strip // and # comments and trailing commas before } or ]
+                    txt = re.sub(r"(?m)^\s*(//|#).*$", "", raw)
+                    txt = re.sub(r",\s*([}\]])", r"\1", txt)
+                    # Replace Python-like literals with JSON ones (outside quotes approximation)
+                    txt = re.sub(r"\bNone\b", "null", txt)
+                    txt = re.sub(r"\bTrue\b", "true", txt)
+                    txt = re.sub(r"\bFalse\b", "false", txt)
+                    # Collapse multiple newlines
+                    txt = re.sub(r"\n{3,}", "\n\n", txt)
+                    return json.loads(txt)
+
+            data = _load_lenient_json(target)
             if isinstance(data, dict):
                 if "label_aliases" in data:
                     # Convert old structure to simple mapping
@@ -144,22 +160,25 @@ def write_merged_catmap(
         except Exception:
             existing = {}
 
-    # Prepare proposed values for new labels with optional validation against allowed codes
+    # Prepare proposed values for new labels. Insert-only policy: any new entry's
+    # category gets prefixed with 'FIX ' to prompt manual review, regardless of
+    # validation results. Existing entries remain unchanged.
     proposed = {}
     for lbl in labels:
         cat, gen = extract_category_gender(lbl)
-        if allowed_codes is not None and cat not in allowed_codes:
-            cat = f"FIX {cat}"
-        proposed[lbl] = [cat, gen]
+        # Always prefix FIX for newly inserted keys (avoid double prefix)
+        cat_out = cat.strip()
+        if not cat_out.lower().startswith("fix "):
+            cat_out = f"FIX {cat_out}"
+        proposed[lbl] = [cat_out, gen]
 
-    # Merge labels (preserve existing values)
+    # Insert-only merge: start with existing mapping (unchanged), then append new keys only
     merged = OrderedDict()
-    new_keys = sorted(set(labels) - set(existing.keys()))
-    for k in sorted(set(existing.keys()) | set(labels)):
-        if k in existing:
-            merged[k] = existing[k]
-        else:
-            merged[k] = proposed.get(k, ["", ""])  # fallback if any
+    for k, v in (existing.items() if isinstance(existing, dict) else []):
+        merged[k] = v
+    new_keys = [k for k in labels if k not in merged]
+    for k in new_keys:
+        merged[k] = proposed.get(k, ["", ""])  # Add only missing keys
 
     # Write back with pretty object formatting and inline array values
     def _dump_inline_arrays(mapping: OrderedDict, fp):
@@ -192,71 +211,97 @@ def write_merged_catmap(
 def extract_category_gender(label: str) -> tuple[str, str]:
     """Extract a normalized (category, gender) from an organizer label.
 
-    Gender detection (case-insensitive): Men, Male, Boys -> Men; Women, Female, Girls -> Women; Open, O -> Open; M -> Men; F -> Women.
-    Removes detected gender token from the label, then normalizes spaces and punctuation.
-    Returns (normalized_category, gender_str_or_empty).
+    - Detect gender tokens (Men/Women/Male/Female/Boys/Girls/M/F/Open/O),
+      preferring tokens at the start or end of the label.
+    - Remove the detected token plus any immediately-adjacent separators
+      like ':', '-', '–', '—', '/', and surrounding spaces.
+    - Normalize spaces and punctuation.
+    Returns (normalized_category, gender_str).
     """
-    text = label or ""
-    src = text
+    text = (label or "").strip()
     gender = ""
 
-    # 1) Handle possessive first (Men's / Women's)
-    if re.search(r"\bmen'?s\b", text, flags=re.IGNORECASE):
-        gender = "Men"
-        text = re.sub(r"\bmen'?s\b", "", text, flags=re.IGNORECASE)
-    elif re.search(r"\bwomen'?s\b", text, flags=re.IGNORECASE):
-        gender = "Women"
-        text = re.sub(r"\bwomen'?s\b", "", text, flags=re.IGNORECASE)
-    else:
-        # 2) Prefer word tokens Men/Women/Male/Female/Boys/Girls
-        word_map = {
-            "men": "Men",
-            "male": "Men",
-            "boys": "Men",
-            "women": "Women",
-            "female": "Women",
-            "girls": "Women",
-        }
-        m = re.search(r"\b(men|male|boys|women|female|girls)\b", text, flags=re.IGNORECASE)
-        if m:
-            gender = word_map[m.group(1).lower()]
-            start, end = m.span()
-            text = (text[:start] + text[end:]).strip()
-        else:
-            # 3) Single-letter tokens M/F
-            m = re.search(r"\b(m|f)\b", text, flags=re.IGNORECASE)
-            if m:
-                gender = "Men" if m.group(1).lower() == "m" else "Women"
-                start, end = m.span()
-                text = (text[:start] + text[end:]).strip()
-            else:
-                # 4) Open tokens
-                m = re.search(r"\b(open|o)\b", text, flags=re.IGNORECASE)
-                if m:
-                    gender = "Open"
-                    start, end = m.span()
-                    text = (text[:start] + text[end:]).strip()
+    # Helpers
+    def _cleanup(s: str) -> str:
+        # Collapse whitespace
+        s = re.sub(r"\s+", " ", s)
+        # Normalize spaces around common separators
+        s = re.sub(r"\s*([:/,\-–—])\s*", r"\1", s)
+        # Put a single space after comma if followed by word/number
+        s = re.sub(r",(?=\w)", ", ", s)
+        # Trim leading separators leftover (e.g., ": Beginner" -> "Beginner")
+        s = re.sub(r"^[\s:;/,\-–—]+", "", s)
+        # Trim trailing separators
+        s = re.sub(r"[\s:;/,\-–—]+$", "", s)
+        # Normalize again spaces
+        s = re.sub(r"\s+", " ", s).strip()
+        return s
 
-    # If we determined Men/Women, also remove stray 'Open' tokens remaining
+    def _strip_wrapping_parens(s: str) -> str:
+        m = re.fullmatch(r"\((.*)\)", s)
+        return m.group(1).strip() if m else s
+
+    # Maps for token -> canonical gender
+    word_map = {
+        "men": "Men",
+        "mens": "Men",
+        "male": "Men",
+        "boys": "Men",
+        "women": "Women",
+        "womens": "Women",
+        "female": "Women",
+        "girls": "Women",
+        "m": "Men",
+        "f": "Women",
+        "open": "Open",
+        "o": "Open",
+    }
+
+    # Prefer tokens at the start like "Men: ..." or "Women - ..."
+    m = re.match(r"^\s*(men'?s|women'?s|men|women|male|female|boys|girls|m|f|open|o)\s*[:/\-–—]?\s*",
+                 text, flags=re.IGNORECASE)
+    if m:
+        token = m.group(1).lower().replace("'s", "s")
+        gender = word_map.get(token, gender)
+        text = text[m.end():]
+    else:
+        # Or tokens at the end like "Beginner - Men"
+        m2 = re.search(r"\s*[:/\-–—]?\s*(men'?s|women'?s|men|women|male|female|boys|girls|m|f|open|o)\s*$",
+                       text, flags=re.IGNORECASE)
+        if m2:
+            token = m2.group(1).lower().replace("'s", "s")
+            gender = word_map.get(token, gender)
+            text = text[:m2.start()]
+
+    # If still undetermined, look for standalone words anywhere
+    if not gender:
+        any_m = re.search(r"\b(men|male|boys|m)\b", text, flags=re.IGNORECASE)
+        any_w = re.search(r"\b(women|female|girls|f)\b", text, flags=re.IGNORECASE)
+        any_o = re.search(r"\b(open|o)\b", text, flags=re.IGNORECASE)
+        if any_m and not any_w:
+            gender = "Men"
+            text = (text[:any_m.start()] + text[any_m.end():])
+        elif any_w and not any_m:
+            gender = "Women"
+            text = (text[:any_w.start()] + text[any_w.end():])
+        elif any_o:
+            gender = "Open"
+            text = (text[:any_o.start()] + text[any_o.end():])
+
+    # Default to Open if not determined
+    if not gender:
+        gender = "Open"
+
+    # Remove stray 'Open' if we have Men/Women to avoid "Men Open Beginner"
     if gender in ("Men", "Women"):
         text = re.sub(r"\b(open|o)\b", "", text, flags=re.IGNORECASE)
 
-    # Normalize multiple spaces
-    text = re.sub(r"\s+", " ", text)
-    # Normalize spaces around slashes and commas
-    text = re.sub(r"\s*/\s*", "/", text)
-    text = re.sub(r"\s*,\s*", ", ", text)
-    # Clean stray spaces before punctuation
-    text = re.sub(r"\s+([,/])", r" \1", text)
+    # Final cleanup and normalization
+    text = _cleanup(text)
+    text = _strip_wrapping_parens(text)
+    text = _cleanup(text)
 
-    normalized = text.strip()
-    # Remove surrounding parentheses if they contain the whole string
-    mpar = re.fullmatch(r"\((.*)\)", normalized)
-    if mpar:
-        normalized = mpar.group(1).strip()
-    if not gender:
-        gender = "Open"
-    return normalized, gender
+    return text, gender
 
 
 def main():
@@ -287,7 +332,8 @@ def main():
 
     # Determine source CSV column for category labels
     if args.bikereg:
-        category_column = 'Category Entered / Merchandise Ordered'
+        #category_column = 'Category Entered / Merchandise Ordered'
+        category_column = 'Category Entered'
     elif args.ccnreg:
         category_column = 'Category'
     else:

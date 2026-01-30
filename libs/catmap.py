@@ -94,7 +94,9 @@ class CatMap:
         else:
             self.allowed = []
         print(f"CatMap: loaded {len(self.map)} mappings and {len(self.allowed)} allowed rules from {path} and {allowed_path}", file=sys.stdout)
-        print(f"CatMap: {allowed_data}", file=sys.stdout)
+        # print(f"CatMap: {allowed_data}", file=sys.stdout)
+        for t in self.allowed:
+            print(f"  allowed rule: {t}", file=sys.stdout)
 
     def lookup_label(self, label: str) -> Optional[List[Any]]:
         """Return the mapping entry for the exact label, or None if not found."""

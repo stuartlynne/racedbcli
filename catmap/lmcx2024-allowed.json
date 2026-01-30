@@ -7,21 +7,21 @@
         #(None,                  'M',    (35,None),   ['Master A', 'Master', ]),
         #(None,                  'F',    (35,None),   ['Master', ]),
 
-        ('Elite',               'M',    (19,None),   ['Elite', ]),
-        ('Elite',               'F',    (19,None),   ['Elite', ]),
-        ('Under 23',            None,   (19,23),     ['Elite', ]),
+        ('Elite',               'M',    (19,None),   ['Advanced', ]),
+        ('Elite',               'F',    (19,None),   ['Advanced', ]),
+        ('Under 23',            None,   (19,23),     ['Advanced', ]),
 
-        ('Master',              'M',    (35,44),     ['Elite', 'Master A', 'Master B', ]),
-        ('Master',              'M',    (45,55),     ['Elite', 'Master A', 'Master B', ]),
+        ('Master',              'M',    (35,44),     ['Advanced', 'Master A', 'Master B', ]),
+        ('Master',              'M',    (45,55),     ['Advanced', 'Master A', 'Master B', ]),
         ('Master',              'M',    (55,None),   ['Master A', 'Master B', 'Master 55+', ],),
 
-        ('Master',              'F',    (35,None),   ['Elite', 'Master', ]),
+        ('Master',              'F',    (35,None),   ['Advanced', 'Master', ]),
 
-        ('Junior',              None,  (17, 18),    ['Elite', ]),
+        ('Junior',              None,  (17, 18),    ['Advanced', ]),
         ('Youth',               None,  (15, 16),    ['U17', ]),
         ('Youth',               None,  (13, 14),    ['U15', ]),
         ('Youth',               None,  (None, 12),  ['U13', ]),
         ('ANY',                 None,  (20, None),  ['Single Speed', ]),
-        (None,                  None,  (None, 19),  ['Youth Beginners', ]),
-        (None,                  None,  (20, None),  ['Novice', ]),
+        (None,                  None,  (None, 19),  ['Youth Beginner', ]),
+        (None,                  None,  (20, None),  ['Beginner', ]),
 ]
