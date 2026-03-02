@@ -111,6 +111,7 @@ class CatMap:
         gender: Optional[str],
         age: Optional[int],
         event_categories: Optional[List[List[Any]]] = None,
+        discipline: Optional[str] = None,
     ) -> Tuple[List[str], Dict[str, List[Optional[str]]]]:
         """Compute allowed event categories from license, gender, and age.
 
@@ -127,10 +128,12 @@ class CatMap:
         selected_type = None
         licenses: List[Optional[str]] = [None]
         if isinstance(license_categories, dict) and license_categories:
-            if 'Cyclocross' in license_categories and license_categories['Cyclocross']:
-                selected_type = 'Cyclocross'
-            elif 'Road' in license_categories and license_categories['Road']:
-                selected_type = 'Road'
+            #if 'Cyclocross' in license_categories and license_categories['Cyclocross']:
+            #    selected_type = 'Cyclocross'
+            #elif 'Road' in license_categories and license_categories['Road']:
+            #    selected_type = 'Road'
+            if discipline in license_categories:
+                selected_type = discipline
             else:
                 # pick any available key
                 selected_type = next(iter(license_categories.keys()))
