@@ -54,6 +54,7 @@ class RaceDB:
         self.password = password
         self.license_holder_data = []
         self.purchases = {}
+        self.purchase_counts = {}
         self.registration_data = []
         self.stats = {
                 'registrations': 0,
@@ -75,6 +76,9 @@ class RaceDB:
         if lastfirst not in self.purchases:
             self.purchases[lastfirst] = []
         self.purchases[lastfirst].append(purchase)
+        purchase_key = str(purchase).strip() if purchase is not None else ""
+        if purchase_key:
+            self.purchase_counts[purchase_key] = self.purchase_counts.get(purchase_key, 0) + 1
         print(f"  Adding purchase for {first_name} {last_name}: {self.purchases[lastfirst]}", file=sys.stdout)
     def get_purchases(self, first_name=None, last_name=None):
         lastfirst = (last_name, first_name)
@@ -108,11 +112,13 @@ class RaceDB:
         fixflag = False
         if not dob:
             dob = f"{2025 - age}-01-01"
+            fixflag = True
         if not gender:
             gender = "M"
+            fixflag = True
         self.append_license_holders_data(first_name=first_name, last_name=last_name, uci_id=uci_id, 
                  license_number=license_number, team=team, dob=dob, gender=gender,
-                 comments="New license holder", note="FIX AGE AND GENDER!")
+                 comments="New license holder", note="FIX AGE AND GENDER!" if fixflag else "")
 
     # update license holder with new data based on last, first names and DoB
     def update_license_holder(self, first_name=None, last_name=None, dob=None, gender=None, uci_id=None, license_number=None, team=None, msg=None):
@@ -148,7 +154,7 @@ class RaceDB:
             files={'excel_file': ('license_holders.xlsx', xlsx_file, )},
             data={
                 "set_team_all_disciplines": "on",
-                "update_license_codes": "on",
+                "update_license_codes": "2",
                 "ok-submit": "OK",
             },)
 
@@ -225,6 +231,9 @@ class RaceDB:
         print("Registration stats:", file=sys.stdout)
         for stat, value in self.stats.items():
             print(f"  {stat}: {value}", file=sys.stdout)
+        print("Merchandise purchased:", file=sys.stdout)
+        for key in sorted(self.purchase_counts.keys()):
+            print(f"  {key}: {self.purchase_counts[key]}", file=sys.stdout)
 
     def new_competition(self, template_date=None, start_date=None, new_name=None, replace=True):
 
