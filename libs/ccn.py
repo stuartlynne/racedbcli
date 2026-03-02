@@ -32,7 +32,7 @@ class GetCCN:
             # XXX should check that this file is for the correct calendar year
             return data
 
-        url = f"https://ccnbikes.com/en/rest/v2/membership_app/identity-memberships/lookup/?first_name={first_name}&last_name={last_name}&page=1&page_size=25&page_slug=cycling-bc-2025"
+        url = f"https://ccnbikes.com/en/rest/v2/membership_app/identity-memberships/lookup/?first_name={first_name}&last_name={last_name}&page=1&page_size=25&page_slug=cycling-bc-2026"
         response = requests.get(url)
         if response.status_code == 200:
             data = response.json()
