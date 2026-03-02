@@ -128,6 +128,8 @@ class GetBikeReg:
         self.registrations = []
         self.discipline = discipline
 
+        print(f"Initialized GetBikeReg with csvfile={self.csvfile} event_id={self.event_id} discipline={self.discipline}", file=sys.stdout)
+
         # Determine license check level from competition race class (if available)
         self.license_check = LicenseCheck.level_for_race_class(comp.get('race_class_name') if isinstance(comp, dict) else None)
         print(f"Determined license check level: {self.license_check.name}", file=sys.stdout)
@@ -600,7 +602,7 @@ class GetBikeReg:
             license_check = br.get('license_check', False)
             purchases = self.racedb.purchases.get((last_name, first_name), [])
 
-            print(f"Processing: {last_name}, {first_name}, {dob}, {gender},", file=sys.stdout)
+            print(f"Processing[{i}]: {last_name}, {first_name}, {dob}, {gender},", file=sys.stdout)
             print(f"  Age: {age} Purchases: {purchases}", file=sys.stdout)
 
             print(f"  License_categories: {license_categories}", file=sys.stderr)
@@ -647,12 +649,29 @@ epilog = """
 The environment variables RACEDB_USERNAME and RACEDB_PASSWORD will be used 
 if to set the authentication username and secret.
 """
+
+
+def parse_event_arg(event_value):
+    value = os.path.basename(str(event_value).strip())
+    if value.lower().endswith(".evt"):
+        value = value[:-4]
+    m = re.match(r"^(\d{4}-\d{2}-\d{2})-(.+)-(\d+)$", value)
+    if not m:
+        return None
+    return {
+        "start_date": m.group(1),
+        "category_format": m.group(2),
+        "event_id": int(m.group(3)),
+    }
+
+
 def main():
     parser = argparse.ArgumentParser(description="RaceDB update license holders from xlsx.", epilog=epilog)
     parser.add_argument('--host', type=str, default='localhost', help='database host')
     parser.add_argument('--username', type=str, default=None, help='authentication username')
     parser.add_argument('--password', type=str, default=None, help='authentication password')
     parser.add_argument('--csvfile', type=str, default=None, help='BikeReg CSV file')
+    parser.add_argument('--event', type=str, default=None, help='Event shorthand: YYYY-MM-DD-<category_format>-<event_id>[.evt]')
     parser.add_argument('--event-id', '--event_id', type=int, default=None, help='BikeReg Event ID (fetch from API instead of --csvfile)')
     parser.add_argument('--bikereg-username', '--bikereg_username', type=str, default=os.getenv("BIKEREG_USERNAME"), help='BikeReg API username')
     parser.add_argument('--bikereg-password', '--bikereg_password', type=str, default=os.getenv("BIKEREG_PASSWORD"), help='BikeReg API password')
@@ -692,6 +711,38 @@ def main():
     stop_after_licenseholders = args.stop_after_licenseholders
     road = args.road
     cyclocross = args.cyclocross
+
+    if args.event:
+        parsed = parse_event_arg(args.event)
+        if not parsed:
+            print(
+                f"Error: --event must match YYYY-MM-DD-<category_format>-<event_id>[.evt], got: {args.event}",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        if start_date and start_date != parsed["start_date"]:
+            print(
+                f"Error: --start-date ({start_date}) conflicts with --event ({parsed['start_date']})",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        if category_format and category_format != parsed["category_format"]:
+            print(
+                f"Error: --category-format ({category_format}) conflicts with --event ({parsed['category_format']})",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        if event_id is not None and int(event_id) != int(parsed["event_id"]):
+            print(
+                f"Error: --event-id ({event_id}) conflicts with --event ({parsed['event_id']})",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        print(f"Parsed --event: start_date={parsed['start_date']} category_format={parsed['category_format']} event_id={parsed['event_id']}", file=sys.stderr)
+        start_date = parsed["start_date"]
+        category_format = parsed["category_format"]
+        event_id = parsed["event_id"]
+
     if road and cyclocross:
         print("Error: cannot specify both --road and --cyclocross", file=sys.stderr)
         sys.exit(1)
