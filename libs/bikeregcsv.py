@@ -22,12 +22,18 @@ class BikeRegCSV:
             if os.path.exists(alias_path):
                 with open(alias_path, 'r', encoding='utf-8') as f:
                     data = json.load(f)
-                # normalize keys to lowercase for case-insensitive matching
-                self.aliases = { (k or '').lower(): v for k, v in data.items() }
-                print(f"Loaded {len(self.aliases)} BikeReg aliases from {alias_path}", file=sys.stdout)
+                if isinstance(data, dict):
+                    # normalize keys to lowercase for case-insensitive matching
+                    self.aliases = {(k or '').lower(): v for k, v in data.items()}
+                    print(f"Loaded {len(self.aliases)} BikeReg aliases from {alias_path}", file=sys.stdout)
+                else:
+                    print(
+                        f"Warning: BikeReg alias file is not a JSON object: {alias_path} ({type(data).__name__})",
+                        file=sys.stdout,
+                    )
         except Exception as e:
             print(f"Warning: failed to load BikeReg aliases: {e}", file=sys.stdout)
-            exit()
+            self.aliases = {}
         print(f"BikeRegCSV Aliases:", file=sys.stdout)
         for k, v in self.aliases.items():
             print(f"  {k} -> {v}", file=sys.stdout)
