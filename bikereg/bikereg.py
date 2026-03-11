@@ -475,7 +475,7 @@ class GetBikeReg:
             # 2. If not found, then see if we can find in RaceDB using first name, last name, dob
             # 3. If not found, see if we can find in RaceDB using first name, last name
 
-            print(f"Processing[{i}]: {last_name}, {first_name}, {dob}, {gender}", file=sys.stderr)
+            print(f"Processing raw [{i}]: {last_name}, {first_name}, {dob}, {gender}", file=sys.stderr)
             licenses = ccn_license_holder = racedb_license_holder = None
             
             if dob:
@@ -602,7 +602,7 @@ class GetBikeReg:
             license_check = br.get('license_check', False)
             purchases = self.racedb.purchases.get((last_name, first_name), [])
 
-            print(f"Processing[{i}]: {last_name}, {first_name}, {dob}, {gender},", file=sys.stdout)
+            print(f"Processing reg [{i}]: {last_name}, {first_name}, {dob}, {gender},", file=sys.stdout)
             print(f"  Age: {age} Purchases: {purchases}", file=sys.stdout)
 
             print(f"  License_categories: {license_categories}", file=sys.stderr)
