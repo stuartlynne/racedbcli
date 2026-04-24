@@ -64,6 +64,7 @@ class LicenseCheck:
     def __init__(self, race_class: str | None = None):
         # Map known race classes to a license check level (see above)
         self.level = self.level_for_race_class(race_class)
+        print(f"License check level set to {self.level.name} for race class {race_class}", file=sys.stderr)
 
 
 class GetBikeReg:
@@ -106,6 +107,7 @@ class GetBikeReg:
         bikereg_username=None,
         bikereg_password=None,
         discipline=None,
+        tt_special=False,
     ):
         self.racedb = racedb
         self.ccn = ccn
@@ -127,6 +129,7 @@ class GetBikeReg:
         self.bikeregcsv = BikeRegCSV(self.csvfile)
         self.registrations = []
         self.discipline = discipline
+        self.tt_special = tt_special
 
         print(f"Initialized GetBikeReg with csvfile={self.csvfile} event_id={self.event_id} discipline={self.discipline}", file=sys.stdout)
 
@@ -143,6 +146,10 @@ class GetBikeReg:
                 'ccn_found': 0,
                 'both_found': 0,
         }
+
+    @staticmethod
+    def _is_time_trial_category(category):
+        return isinstance(category, str) and category.startswith("Time Trial")
 
     @staticmethod
     def format_dob(value):
@@ -330,25 +337,31 @@ class GetBikeReg:
         reg_rows = {}
         reg_order = []
         merch_by_person = {}
+        txn_counts = {}
+        skipped_removed = 0
+        reg_duplicates = 0
 
+        # Keep every non-removed Reg row; do not dedupe by identity.
+        reg_seq = 0
         for row in entries:
             if not isinstance(row, dict):
                 continue
             txn = self.TRANSACTION_LABEL_MAP.get(str(row.get("TransactionType", "")), str(row.get("TransactionType", "")))
+            txn_counts[txn] = txn_counts.get(txn, 0) + 1
             key_info = self._get_entry_key_info(row)
-            person_key = ("identity",) + key_info["identity"]
             if txn == "Reg":
                 if self._is_removed_registration(row):
+                    skipped_removed += 1
                     continue
-                if person_key not in reg_rows:
-                    reg_rows[person_key] = row
-                    reg_order.append(person_key)
-                else:
-                    reg_rows[person_key] = self._choose_better_reg(reg_rows[person_key], row)
+                person_key = ("reg_index", reg_seq)
+                reg_seq += 1
+                reg_rows[person_key] = row
+                reg_order.append(person_key)
 
         reg_by_confirmation = {}
         reg_by_eid = {}
         reg_by_race_id = {}
+        reg_by_identity = {}
         reg_by_identity_weak = {}
         for person_key in reg_order:
             row = reg_rows[person_key]
@@ -359,43 +372,101 @@ class GetBikeReg:
                 reg_by_eid.setdefault(key_info["eid"], set()).add(person_key)
             if key_info["race_id"]:
                 reg_by_race_id.setdefault(key_info["race_id"], set()).add(person_key)
+            reg_by_identity.setdefault(("identity",) + key_info["identity"], set()).add(person_key)
             reg_by_identity_weak.setdefault(("identity_weak",) + key_info["identity_weak"], set()).add(person_key)
 
+        merch_total = 0
+        merch_matched = 0
+        merch_unmatched = 0
+        merch_ambiguous = 0
+        merch_match_path_counts = {}
+        unmatched_merch_samples = []
         for row in entries:
             if not isinstance(row, dict):
                 continue
             txn = self.TRANSACTION_LABEL_MAP.get(str(row.get("TransactionType", "")), str(row.get("TransactionType", "")))
             if txn != "Merch":
                 continue
+            merch_total += 1
 
             key_info = self._get_entry_key_info(row)
             candidates = []
+            match_path = None
             strong_person_key = ("identity",) + key_info["identity"]
             weak_person_key = ("identity_weak",) + key_info["identity_weak"]
 
-            if strong_person_key in reg_rows:
-                candidates = [strong_person_key]
-            elif weak_person_key in reg_by_identity_weak and len(reg_by_identity_weak[weak_person_key]) == 1:
-                candidates = list(reg_by_identity_weak[weak_person_key])
-            elif key_info["eid"] and key_info["eid"] in reg_by_eid and len(reg_by_eid[key_info["eid"]]) == 1:
+            if key_info["eid"] and key_info["eid"] in reg_by_eid and len(reg_by_eid[key_info["eid"]]) == 1:
                 candidates = list(reg_by_eid[key_info["eid"]])
+                match_path = "eid"
             elif key_info["race_id"] and key_info["race_id"] in reg_by_race_id and len(reg_by_race_id[key_info["race_id"]]) == 1:
                 candidates = list(reg_by_race_id[key_info["race_id"]])
+                match_path = "race_id"
             elif (
                 key_info["confirmation"]
                 and key_info["confirmation"] in reg_by_confirmation
                 and len(reg_by_confirmation[key_info["confirmation"]]) == 1
             ):
                 candidates = list(reg_by_confirmation[key_info["confirmation"]])
+                match_path = "confirmation"
+            elif strong_person_key in reg_by_identity and len(reg_by_identity[strong_person_key]) == 1:
+                candidates = list(reg_by_identity[strong_person_key])
+                match_path = "identity_strong"
+            elif weak_person_key in reg_by_identity_weak and len(reg_by_identity_weak[weak_person_key]) == 1:
+                candidates = list(reg_by_identity_weak[weak_person_key])
+                match_path = "identity_weak"
+            else:
+                # Track ambiguous cases where a linkage bucket exists but has multiple candidates.
+                if strong_person_key in reg_by_identity and len(reg_by_identity[strong_person_key]) > 1:
+                    merch_ambiguous += 1
+                elif weak_person_key in reg_by_identity_weak and len(reg_by_identity_weak[weak_person_key]) > 1:
+                    merch_ambiguous += 1
+                elif key_info["eid"] and key_info["eid"] in reg_by_eid and len(reg_by_eid[key_info["eid"]]) > 1:
+                    merch_ambiguous += 1
+                elif key_info["race_id"] and key_info["race_id"] in reg_by_race_id and len(reg_by_race_id[key_info["race_id"]]) > 1:
+                    merch_ambiguous += 1
+                elif key_info["confirmation"] and key_info["confirmation"] in reg_by_confirmation and len(reg_by_confirmation[key_info["confirmation"]]) > 1:
+                    merch_ambiguous += 1
 
             if candidates:
                 merch_by_person.setdefault(candidates[0], []).append(self._merch_item_text(row))
+                merch_matched += 1
+                merch_match_path_counts[match_path] = merch_match_path_counts.get(match_path, 0) + 1
+            else:
+                merch_unmatched += 1
+                if len(unmatched_merch_samples) < 10:
+                    user_info = row.get("UserInfo") if isinstance(row.get("UserInfo"), dict) else {}
+                    unmatched_merch_samples.append(
+                        {
+                            "last": user_info.get("LastName", ""),
+                            "first": user_info.get("FirstName", ""),
+                            "dob": user_info.get("DOB", ""),
+                            "email": user_info.get("Email", ""),
+                            "category": row.get("CategoryName", ""),
+                            "confirmation": key_info["confirmation"],
+                            "eid": key_info["eid"],
+                            "race_id": key_info["race_id"],
+                        }
+                    )
 
         merged = []
         for person_key in reg_order:
             out = self._row_to_csv_dict(reg_rows[person_key])
             out["MerchSummary"] = ", ".join(merch_by_person.get(person_key, []))
             merged.append(out)
+        print(
+            f"BikeReg merge debug: entries={len(entries)} txn_counts={txn_counts} "
+            f"reg_kept={len(reg_order)} reg_removed={skipped_removed} reg_duplicates={reg_duplicates}",
+            file=sys.stderr,
+        )
+        print(
+            f"BikeReg merge debug: merch_total={merch_total} matched={merch_matched} "
+            f"unmatched={merch_unmatched} ambiguous={merch_ambiguous} match_paths={merch_match_path_counts}",
+            file=sys.stderr,
+        )
+        if unmatched_merch_samples:
+            print("BikeReg merge debug: unmatched merch samples (up to 10):", file=sys.stderr)
+            for sample in unmatched_merch_samples:
+                print(f"  {sample}", file=sys.stderr)
         return merged
 
     def fetch_event_to_temp_csv(self, event_id, username, password):
@@ -417,6 +488,12 @@ class GetBikeReg:
             if isinstance(payload, str):
                 payload = json.loads(payload)
             entries = self._extract_entries(payload)
+            top_keys = sorted(payload.keys()) if isinstance(payload, dict) else []
+            print(
+                f"BikeReg API debug: event_id={event_id} response_type={type(payload).__name__} "
+                f"top_keys={top_keys} extracted_entries={len(entries)}",
+                file=sys.stderr,
+            )
             merged_rows = self._merge_entries_for_csv(entries)
 
         path = os.path.abspath("bikereg_event.csv")
@@ -582,6 +659,15 @@ class GetBikeReg:
         print()
 
     def process_registrations(self):
+        requested_categories_by_person = {}
+        if self.tt_special:
+            for br in self.registrations:
+                person_key = (
+                    br.get('Last Name'),
+                    br.get('First Name'),
+                    br.get('Date of Birth'),
+                )
+                requested_categories_by_person.setdefault(person_key, []).append(br.get('requested_category'))
 
         for i, br in enumerate(self.registrations):
 
@@ -602,6 +688,20 @@ class GetBikeReg:
             license_check = br.get('license_check', False)
             purchases = self.racedb.purchases.get((last_name, first_name), [])
 
+            if self.tt_special and self._is_time_trial_category(requested_category):
+                person_key = (last_name, first_name, dob)
+                person_categories = requested_categories_by_person.get(person_key, [])
+                has_non_tt_category = any(
+                    category and not self._is_time_trial_category(category)
+                    for category in person_categories
+                )
+                if not has_non_tt_category:
+                    requested_category = f"{requested_category} Seed Last"
+                    print(
+                        f"  TT special: {last_name}, {first_name} only has TT registrations, using [{requested_category}]",
+                        file=sys.stderr,
+                    )
+
             print(f"Processing reg [{i}]: {last_name}, {first_name}, {dob}, {gender},", file=sys.stdout)
             print(f"  Age: {age} Purchases: {purchases}", file=sys.stdout)
 
@@ -614,6 +714,7 @@ class GetBikeReg:
                 licenses = []
             allowed_categories, licenses = self.catmap.get_event_category(license_categories=license_categories, gender=gender, 
                                                                           age=age, discipline=self.discipline) 
+            print(f"  Licences: {licenses}", file=sys.stderr)
             print('  Allowed Categories:', allowed_categories, file=sys.stderr)
             print('  Licenses:', licenses, file=sys.stderr)
             print(f"  Requested: {requested_category}", file=sys.stderr)
@@ -631,6 +732,7 @@ class GetBikeReg:
 
                 yprint('  Requested [%s] CATEGORY NOT ALLOWED' % (requested_category), file=sys.stderr)
                 self.racedb.add_registration(first_name=first_name, last_name=last_name, uci_id=uci_id, gender=gender,
+                                             dob=dob,
                                              category=requested_category, license_number=license_number, license_type=license_type, license_check=False,
                                              note=f"Purchases {purchases}\nCATEGORY NOT ALLOWED [{requested_category}]\nAllowed{allowed_categories}\nLicense: {licenses}",
                                              allowed=False)
@@ -638,9 +740,10 @@ class GetBikeReg:
             else:
                 print('  Requested [%s] CATEGORY ALLOWED' % (requested_category), file=sys.stderr)
                 self.racedb.add_registration(first_name=first_name, last_name=last_name, uci_id=uci_id, gender=gender,
+                                             dob=dob,
                                              category=requested_category, license_number=license_number, 
                                              license_type=license_type, license_check=license_check,
-                                             note=f"Purchases {purchases}\nBR ALLOWED [{requested_category}]\nLicense: {licenses}",
+                                             note=f"Purchases {purchases}\nALLOWED [{requested_category}]\nLicense: {licenses}",
                                              allowed=True)
 
 
@@ -665,6 +768,21 @@ def parse_event_arg(event_value):
     }
 
 
+def parse_event_name_arg(event_value):
+    value = os.path.basename(str(event_value).strip())
+    if value.lower().endswith(".evt"):
+        value = value[:-4]
+    m = re.match(r"^(\d{4}-\d{2}-\d{2})-(.+)-([^-]+)-(\d+)$", value)
+    if not m:
+        return None
+    return {
+        "start_date": m.group(1),
+        "name": m.group(2),
+        "category_format": m.group(3),
+        "event_id": int(m.group(4)),
+    }
+
+
 def main():
     parser = argparse.ArgumentParser(description="RaceDB update license holders from xlsx.", epilog=epilog)
     parser.add_argument('--host', type=str, default='localhost', help='database host')
@@ -672,6 +790,8 @@ def main():
     parser.add_argument('--password', type=str, default=None, help='authentication password')
     parser.add_argument('--csvfile', type=str, default=None, help='BikeReg CSV file')
     parser.add_argument('--event', type=str, default=None, help='Event shorthand: YYYY-MM-DD-<category_format>-<event_id>[.evt]')
+    parser.add_argument('--name', type=str, default=None, help='Competition name for same-day disambiguation.')
+    parser.add_argument('--event-name', '--event_name', type=str, default=None, help='Event shorthand: YYYY-MM-DD-<event_name>-<category_format>-<event_id>[.evt]')
     parser.add_argument('--event-id', '--event_id', type=int, default=None, help='BikeReg Event ID (fetch from API instead of --csvfile)')
     parser.add_argument('--bikereg-username', '--bikereg_username', type=str, default=os.getenv("BIKEREG_USERNAME"), help='BikeReg API username')
     parser.add_argument('--bikereg-password', '--bikereg_password', type=str, default=os.getenv("BIKEREG_PASSWORD"), help='BikeReg API password')
@@ -687,6 +807,7 @@ def main():
     parser.add_argument("--stop-after-licenseholders", "--stop_after_licenseholders", action='store_true', help='Stop of license holder upload.')
     parser.add_argument("--cyclocross", action='store_true', help='Use cyclocross license data.')
     parser.add_argument("--road", action='store_true', help='Use road license data.')
+    parser.add_argument("--tt-special", action='store_true', help='TT Special.')
     #parser.add_argument('--replace', action='store_true', help='Replace existing competition.')
 
 
@@ -703,6 +824,7 @@ def main():
     event_id = args.event_id
     template_date = args.template_date
     start_date = args.start_date
+    name = args.name
     category_format = args.category_format
     new_name = args.new_name
     bibs = args.bibs
@@ -743,6 +865,47 @@ def main():
         category_format = parsed["category_format"]
         event_id = parsed["event_id"]
 
+    if args.event_name:
+        parsed = parse_event_name_arg(args.event_name)
+        if not parsed:
+            print(
+                f"Error: --event-name must match <event_name>-<category_format>-<event_id>[.evt], got: {args.event_name}",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        if name and name != parsed["name"]:
+            print(
+                f"Error: --name ({name}) conflicts with --event-name ({parsed['name']})",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        if start_date and start_date != parsed["start_date"]:
+            print(
+                f"Error: --start-date ({start_date}) conflicts with --event-name ({parsed['start_date']})",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        if category_format and category_format != parsed["category_format"]:
+            print(
+                f"Error: --category-format ({category_format}) conflicts with --event-name ({parsed['category_format']})",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        if event_id is not None and int(event_id) != int(parsed["event_id"]):
+            print(
+                f"Error: --event-id ({event_id}) conflicts with --event-name ({parsed['event_id']})",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        print(
+            f"Parsed --event-name: start_date={parsed['start_date']} name={parsed['name']} category_format={parsed['category_format']} event_id={parsed['event_id']}",
+            file=sys.stderr,
+        )
+        start_date = parsed["start_date"]
+        name = parsed["name"]
+        category_format = parsed["category_format"]
+        event_id = parsed["event_id"]
+
     if road and cyclocross:
         print("Error: cannot specify both --road and --cyclocross", file=sys.stderr)
         sys.exit(1)
@@ -774,9 +937,9 @@ def main():
         categories = []
         fmt_name = None
         if start_date:
-            comp, categories = sql.find_competition_categories(date=start_date)
+            comp, categories = sql.find_competition_categories(name=name, date=start_date)
             if not comp:
-                print(f"Error: competition not found for start_date {start_date}", file=sys.stderr)
+                print(f"Error: competition not found for name={name} start_date={start_date}", file=sys.stderr)
                 sys.exit(1)
             print(
                 f"Using categories from competition '{comp.get('name')}' on {comp.get('start_date')} "
@@ -826,7 +989,8 @@ def main():
             event_id=event_id,
             bikereg_username=args.bikereg_username,
             bikereg_password=args.bikereg_password,
-            discipline='Cyclocross' if cyclocross else 'Road',  
+            discipline='Cyclocross' if cyclocross else 'Road',
+            tt_special=args.tt_special,
         )
         source_label = bikereg.source_label
         # Provide allowed category codes for purchase detection
@@ -913,10 +1077,11 @@ def main():
             gprint('5. Uploading Registrations', file=sys.stdout)
             gprint('5. ---------------------------------')
             try:
-                print(f"Looking for competition with start date: {start_date}")
-                competition = sql.find_competition(new_name, start_date)
+                target_name = new_name if new_name else name
+                print(f"Looking for competition with start date: {start_date} name: {target_name}")
+                competition = sql.find_competition(target_name, start_date)
             except TypeError as e:
-                print(f"Competition not found start date: {start_date}")
+                print(f"Competition not found start date: {start_date} name: {target_name}")
                 exit(1)
 
             print('5. competition:', competition, file=sys.stdout)

@@ -215,6 +215,7 @@ class GetCCNReg:
             if purchases and len(purchases) > 0:
                 note = f"PURCHASED [{', '.join(purchases)}] {note}"
             self.racedb.add_registration(first_name=first_name, last_name=last_name, uci_id=uci_id, gender=gender,
+                                         dob=dob,
                                          category=requested_category, license_number=license_number, 
                                          license_type=license_type, license_check=license_check,
                                          note=note,
@@ -375,4 +376,3 @@ def main():
 if __name__ == "__main__":
     main()
     exit(0)
-
