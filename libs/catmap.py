@@ -7,6 +7,15 @@ from typing import Any, Dict, List, Optional, Tuple
 import re
 import ast
 
+   
+TT_speeds = {
+    ('Cat 1',  ['M', 46], ['F', 44],        
+    ('Cat 2',  ['M', 45], ['F', 43],        
+    ('Cat 3',  ['M', 43], ['F', 41],        
+    ('Cat 4',  ['M', 42], ['F', 40],        
+    ('Cat 5',  ['M', 41], ['F', 39],        
+}
+
 
 def _norm_label(label: str) -> str:
     # Keep a simple normalizer available if we need it later
@@ -139,44 +148,74 @@ class CatMap:
                 selected_type = next(iter(license_categories.keys()))
             licenses = license_categories.get(selected_type) or [None]
 
+        print(f"CatMap: computing event category for licenses={licenses}", file=sys.stderr)
+
         gnorm = None
         if isinstance(gender, str):
             gnorm = gender.strip().upper()
             if gnorm and gnorm[0] in ('M', 'F'):
                 gnorm = gnorm[0]
+            elif gname == "Men":
+                gnorm = 'M'
+            elif gname == "Women":
+                gnorm = 'F'
             else:
                 gnorm = None
 
+        print(f"CatMap: normalized gender={gnorm}, age={age}, selected_type={selected_type}", file=sys.stderr)
         allowed_categories: List[str] = []
-        for lic in licenses or [None]:
-            for rule in rules:
-                if not isinstance(rule, list) or len(rule) < 4:
-                    continue
+
+        def log(i: int, j: int, lic: str, rule: List[Any], msg: str) -> None:
+            if True:
                 req_license, req_gender, (min_age, max_age), cats = rule[0], rule[1], rule[2], rule[3]
+                print(f"CatMap[{i}:{j}] lic={lic} req_license={req_license}, req_gender={req_gender}, min_age={min_age}, max_age={max_age}, cats={cats} {msg}", file=sys.stderr)
 
-                # Gender must match if specified
-                if req_gender and gnorm and req_gender != gnorm:
-                    continue
-
-                # License must match if specified and not ANY
-                if req_license == 'ANY':
+        if licenses is not None and len(licenses) != 0:
+            for i, lic in enumerate(licenses or [None]):
+                if lic is None:
                     pass
-                elif req_license and lic and req_license != lic:
-                    continue
-                elif req_license and not lic:
-                    continue
+                for j, rule in enumerate(rules):
+                    if not isinstance(rule, list) or len(rule) < 4:
+                        continue
+                    req_license, req_gender, (min_age, max_age), cats = rule[0], rule[1], rule[2], rule[3]
 
-                # Age bounds
-                if age is not None and min_age is not None and int(age) < int(min_age):
-                    continue
-                if age is not None and max_age is not None and int(age) > int(max_age):
-                    continue
+                    # Gender must match if specified
+                    if req_gender and gnorm and req_gender != gnorm:
+                        log(i, j, lic, rule, "gender mismatch")
+                        continue
 
-                # Add categories uniquely
-                if cats:
-                    for c in cats:
-                        if c not in allowed_categories:
-                            allowed_categories.append(c)
+                    # License must match if specified and not ANY
+                    if False:
+                        if req_license == 'ANY':
+                            pass
+                        elif req_license and lic and req_license != lic:
+                            log(i, j, lic, rule, f"license mismatch (required {req_license}, got {lic})")
+                            continue
+                        elif req_license and not lic:
+                            log(i, j, lic, rule, f"license mismatch (license required but not provided)")
+                            continue
+                    if True:
+                        if lic and cats and lic not in cats:
+                            log(i, j, lic, rule, f"license {lic} not in allowed categories {cats}")
+                            continue
+
+                    # Age bounds
+                    if age is not None and min_age is not None and int(age) < int(min_age):
+                        log(i, j, lic, rule, f"age {age} below min {min_age}")
+                        continue
+                    if age is not None and max_age is not None and int(age) > int(max_age):
+                        log(i, j, lic, rule, f"age {age} above max {max_age}")
+                        continue
+
+                    # Add categories uniquely
+                    if False:
+                        if cats:
+                            log(i, j, lic, rule, "rule matches, adding categories " + ", ".join(cats))
+                            for c in cats:
+                                if c not in allowed_categories:
+                                    allowed_categories.append(c)
+                    if True and req_license:
+                        allowed_categories.extend([req_license]) 
 
         return allowed_categories, ({selected_type: licenses} if selected_type else {'': licenses})
 

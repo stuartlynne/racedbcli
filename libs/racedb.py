@@ -36,11 +36,11 @@ class RaceDB:
     RegistrationHeaders = { 
                            "Last Name": 20, 
                            "First Name": 20, 
-                           "DOB": 20, 
+                           "DOB": 12, 
                            "Gender": 5, 
                            "Age": 5, 
                            "UCI ID": 10, 
-                           "License Check": 4, 
+                           "License Check": 6, 
                            "License": 10, 
                            "Category": 20, 
                            "Paid": 5,
@@ -158,11 +158,12 @@ class RaceDB:
                 "ok-submit": "OK",
             },)
 
-    def add_registration(self, first_name=None, last_name=None, uci_id=None, license_number=None, license_check=False, 
+    def add_registration(self, first_name=None, last_name=None, dob=None, uci_id=None, license_number=None, license_check=False, 
                          gender=None, license_type=None, category=None, note=None, allowed=False):
         self.registration_data.append({
             'First Name': first_name,
             'Last Name': last_name,
+            'DOB': dob,
             'License': license_number,
             'License Check': license_check,
             'UCI ID': uci_id,
@@ -215,6 +216,7 @@ class RaceDB:
             xlsx_file = self.create_registrations_xlsx_file(self.registration_data, file_path="registrations.xlsx", teams=teams)
         if not upload:
             return
+        print(f"Bibs: {bibs}, teams: {teams}", file=sys.stderr)
         xlsx_file = self.create_registrations_xlsx_in_memory(self.registration_data, teams=teams)
 
         next_path = f"RaceDB/Competitions/CompetitionDashboard/{competition_id}/UploadPrereg/{competition_id}/"
