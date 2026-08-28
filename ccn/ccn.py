@@ -23,6 +23,7 @@ from libs.ccn import GetCCN
 from libs.catmap import CatMap
 from libs.lib import gprint, yprint
 from libs.ccncsv import CCNRegCSV
+from libs.mcpconfig import load_mcp_host
 from cli.competition import create_competition_from_template
 
 # This script will process a ccnreg CSV file to load into RaceDB competition.
@@ -193,6 +194,7 @@ class GetCCNReg:
             license_type = br.get('license_type', None)
             license_check = br.get('license_check', False)
             purchases = self.racedb.purchases.get((last_name, first_name), [])
+            kmh = None
 
             print(f"Processing[{i}]: {last_name}, {first_name}, {dob}, {gender},", file=sys.stdout)
             #print(f"  Age: {age} Purchases: {purchases}", file=sys.stdout)
@@ -210,6 +212,14 @@ class GetCCNReg:
             print('  Licenses:', licenses, file=sys.stderr)
             print(f"  Requested: {requested_category}", file=sys.stderr)
 
+            if isinstance(requested_category, str) and requested_category.startswith("Time Trial"):
+                kmh = self.catmap.estimate_tt_kmh(
+                    license_categories=license_categories,
+                    gender=gender,
+                    discipline='Road',
+                ) if self.catmap else None
+                print(f"  TT kmh estimate: {kmh}", file=sys.stderr)
+
             print('  Requested [%s] CATEGORY ALLOWED' % (requested_category), file=sys.stderr)
             note=f"ALLOWED [{requested_category}] LICENSE {licenses}"
             if purchases and len(purchases) > 0:
@@ -217,9 +227,10 @@ class GetCCNReg:
             self.racedb.add_registration(first_name=first_name, last_name=last_name, uci_id=uci_id, gender=gender,
                                          dob=dob,
                                          category=requested_category, license_number=license_number, 
-                                         license_type=license_type, license_check=license_check,
+                                         license_type=license_type, license_check=license_check, kmh=kmh,
                                          note=note,
-                                         allowed=True)
+                                         allowed=True,
+                                         waiver=False)
 
 
 
@@ -239,13 +250,19 @@ def main():
     parser.add_argument('--category_format', type=str, help='CategoryFormat name (e.g., lmcx2018)')
     parser.add_argument('--bibs', action='store_true', help='Generate bib numbers.')
     parser.add_argument('--teams', action='store_true', help='Update participants team.')
+    parser.add_argument('--waiver', action='store_true', help='Mark waivers as signed in registration upload.')
     parser.add_argument('--stderr', "--debug", action='store_true', help='Enable stderr output.')
     parser.add_argument("--stderrdup", action='store_true', help='Send stderr to stdout.')
+    parser.add_argument("--mcp-host", "--mcp_host", help='Named host in ~/.mcp.json; sets --host and --mcp-url.')
+    parser.add_argument("--mcp-url", "--mcp_url", default=os.getenv("RACEDB_MCP_URL"), help='RaceDB MCP streamable HTTP URL for direct registration upsert.')
+    parser.add_argument("--mcp-token", "--mcp_token", default=os.getenv("RACEDB_MCP_TOKEN") or os.getenv("CONTEXTFORGE_TOKEN"), help='Bearer token for RaceDB MCP, if required.')
+    parser.add_argument("--mcp-dry-run", "--mcp_dry_run", action='store_true', help='Dry-run direct MCP registration upserts.')
     #parser.add_argument('--replace', action='store_true', help='Replace existing competition.')
 
     if len(sys.argv) == 1:
         parser.print_help(sys.stderr)
         sys.exit(1)
+    explicit_mcp_url = any(arg == "--mcp-url" or arg == "--mcp_url" or arg.startswith("--mcp-url=") or arg.startswith("--mcp_url=") for arg in sys.argv[1:])
     args = parser.parse_args()
     
     host = args.host        # e.g. http://192.168.250.51:9080
@@ -256,6 +273,17 @@ def main():
     start_date = args.start_date
     new_name = args.new_name
     bibs = args.bibs
+
+    if args.mcp_host:
+        try:
+            mcp_config = load_mcp_host(args.mcp_host)
+        except RuntimeError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+        host = mcp_config["racedb_url"]
+        if not explicit_mcp_url:
+            args.mcp_url = mcp_config.get("mcp_url")
+        print(f"Using MCP host [{args.mcp_host}]: racedb_url={host} mcp_url={args.mcp_url}", file=sys.stderr)
 
     #host = host.removeprefix("https://").removeprefix("http://").split(":")[0]
 
@@ -364,14 +392,23 @@ def main():
 
             print('5. competition:', competition, file=sys.stdout)
             #upload_prereg(racedb, competition['id'], csvfile)
-            racedb.upload_registrations(competition['id'], upload=True, bibs=bibs, teams=args.teams,)
+            racedb.upload_registrations(
+                competition['id'],
+                upload=True,
+                bibs=bibs,
+                teams=args.teams,
+                waiver=args.waiver,
+                mcp_url=args.mcp_url,
+                mcp_token=args.mcp_token,
+                mcp_dry_run=args.mcp_dry_run,
+            )
             gprint('5. ---------------------------------')
             gprint('5. Finished Uploading Registrations', file=sys.stdout)
             gprint('5. ---------------------------------')
             #upload.login_and_upload()
     else:
         # Just create the registratiuons.xlsx file
-        racedb.upload_registrations(None, upload=False)
+        racedb.upload_registrations(None, upload=False, waiver=args.waiver)
 
 if __name__ == "__main__":
     main()
