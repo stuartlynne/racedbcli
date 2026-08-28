@@ -1,0 +1,37 @@
+[
+  [ "Elite",           "M", [None, None], [ "Elite" ] ],
+  [ "Elite",           "F", [None, None], [ "Elite" ] ],
+
+  [ "U23",             "M", [19, 22], [ "U23", "Under 23" ] ],
+  [ "U23",             "F", [19, 22], [ "U23", "Under 23" ] ],
+
+  [ "U19",             "M", [17, 18], [ "Junior" ] ],
+  [ "U19",             "F", [17, 18], [ "Junior" ] ],
+
+  [ "U17",             "M", [15, 16], [ "Under 17"] ],
+  [ "U17",             "F", [15, 16], [ "Under 17"] ],
+
+  [ "U15",             "M", [13, 14], [ "Under 15"] ],
+  [ "U15",             "F", [13, 14], [ "Under 15"] ],
+
+  [ "U13",             "M", [None, 12], [ "Under 13"] ],
+  [ "U13",             "F", [None, 12], [ "Under 13"] ],
+
+  [ "Open",            None, [None, None], [] ],
+  [ "Youth A",         None, [None, None], [] ],
+  [ "Youth B",         None, [None, None], [] ],
+
+  [ "Master 35-44",    "M", [35, 44],   [ "Master 35-44" ] ],
+  [ "Master 45-54",    "M", [45, 54],   [ "Master 45-54" ] ],
+  [ "Master 55-64",    "M", [55, 64],   [ "Master 55-64" ] ],
+  [ "Master 65+",      "M", [65, None], [ "Master 65+" ] ],
+  [ "Master 35-44",    "F", [35, 44],   [ "Master Women", "35-44" ] ],
+  [ "Master 45-54",    "F", [45, 54],   [ "Master Women", "45-54" ] ],
+  [ "Master 55-64",    "F", [55, 64],   [ "Master Women", "55-64" ] ],
+  [ "Master 65+",      "F", [65, None], [ "Master Women", "65+" ] ],
+
+  [ "Para-Cycling Tricycle",  None, [None, None], [] ],
+  [ "Para-Cycling Bicycle",   None, [None, None], [] ],
+  [ "Para-Cycling Tandem",    None, [None, None], [] ],
+  [ "Para-Cycling Hand Cycle", None, [None, None], [] ]
+]

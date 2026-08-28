@@ -19,7 +19,6 @@
     "ivany, carsten ivany, 1981-01-25": ["ivany", "carsten", "1981-01-25", "00000000000"],
     "hutchinson, alexander, 1993-06-20": ["hutchinson", "alex", "1993-06-20", "00000000000"],
     "o'mahony, david, 1981-04-15": ["o'mahony", "dave", "1981-04-15", "00000000000"],
-    #"murison, alex, 1992-02-04": ["murison", "alexander", "1992-02-04", "00000000000"],
     "wood, dan, 1972-10-20": ["wood", "daniel", "1972-10-20", ""],
     "birkenbuel, james c, 1974-03-07": ["birkenbuel", "james cameron", "1974-03-07", "10051488490"],
     "l, p, 2002-05-11": ["balabat", "pinco", "2002-05-11", "00000000000"],
@@ -30,5 +29,7 @@
     "bradbury, christopher, 1991-01-11": ["bradbury", "christopher", "1991-01-10", "10037448044"],
     "aparicio, oscar, 1993-01-29": ["aparicio", "oscar", "1993-01-09", ""],
     "moore, dan, 2003-09-29": ["moore", "dan", "2004-09-09", "10153118322"],
+    "legault- giraud, monet, 2011-08-24": ["legault-giraud", "monet", "2011-08-24", "10163184393"],
+    "green, brian, 1973-03-24": ["green", "brian", "1973-03-24", "10053813762"],
     "dummy, end, 1900-01-01": ["dummy", "end", "1900-01-01", "00000000000"]
 }

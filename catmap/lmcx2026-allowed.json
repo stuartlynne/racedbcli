@@ -1,0 +1,23 @@
+[
+["Open",          None, [None, None], [] ],
+["U13",           "M",  [None, 12],   [] ],
+["U15",           "M",  [13, 14],     [] ],
+["U17",           "M",  [15, 16],     [] ],
+["U19",           "M",  [17, 18],     [] ],
+["Intermediate",  None, [None, None], [] ],
+["Advanced",      None, [None, None], [] ],
+["Masters (40+)", None, [40, None],   [] ],
+["Masters (55+)", None, [55, None],   [] ],
+
+["Women",         "F",  [None, None], [] ],
+["U13",           "F",  [None, None], [] ],
+["U15",           "F",  [None, None], [] ],
+["U17",           "F",  [None, None], [] ],
+["U19",           "F",  [None, None], [] ],
+["Intermediate",  "F",  [None, None], [] ],
+["Advanced",      "F",  [None, None], [] ],
+["Masters (40+)", "F",  [40, None],   [] ],
+
+["Non-Binary",    None, [None, None], [] ],
+["Singlespeed",   None, [None, None], [] ]
+]

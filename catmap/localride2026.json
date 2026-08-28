@@ -1,0 +1,22 @@
+{
+  "Open A (must have a previous Cat 3 or higher race license}": [ "A", "Open" ],
+  "Men Master (Must have held a previous Cat 4 or higher race license)": [ "B Masters", "Men" ],
+  "Master Intermediate": [ "C Masters", "Men" ],
+  "Open B (Must have held a previous Cat 4 or higher race license)": [ "B", "Men" ],
+
+  "Open Intermediate": [ "C", "Men" ],
+  "Open Novice": [ "D", "Men" ],
+  "Open Master B (Must have held a previous Cat 4 or higher race license)": [ "B Masters", "Men" ],
+  "Open Master Intermediate": [ "C Masters", "Open" ],
+
+  "Open A (Must have held a previous Cat 1,2,3 license)": [ "A", "Open" ],
+  "Open B  (must have a previous Cat 4 or higher race license}": [ "B", "Open" ],
+  "Open Master  Intermediate": [ "C Masters", "Open" ],
+  "Open Master (A)": [ "B Masters", "Open" ],
+
+  "Women A (Must have held a previous Cat 1,2,3 race license)": [ "A", "Women" ],
+  "Women B (Must have held a previous Cat 1,2,3 race license)": [ "B", "Women" ],
+  "Women B (Must have held a previous Cat 3 or higher race license)": [ "B", "Women" ],
+  "Women Intermediate": [ "C", "Women" ],
+  "Women Novice": [ "D", "Women" ]
+}

@@ -1,0 +1,23 @@
+{
+"Open: Launch (10:31)":                     ["Open", "Open"],
+"Open: U13 (10:31)":                        ["U13", "Open"],
+"Open: U15 (10:31)":                        ["U15", "Open"],
+"Open: U17 (11:15)":                        ["U17"," Open"],
+"Open: U19 (14:15)":                        ["U19", "Open"],
+"Open: Intermediate (11:15)":               ["Intermediate", "Open"],
+"Open: Advanced (14:15)":                   ["Advanced", "Open"],
+"Open: Masters (13:15)":                    ["Masters (40+)", "Open"],
+"Open: Super Masters 55+ (13:16)":          ["Masters (55+)", "Open"],
+
+"Women: Launch (10:33)":                    ["Women", "Women"],
+"Women: U13 (10:33)":                       ["U13", "Women"],
+"Women: U15 (10:33)":                       ["U15", "Women"],
+"Women: U17 (11:16)":                       ["U17", "Women"],
+"Women: U19 (14:16)":                       ["U19", "Women"],
+"Women: Intermediate (11:16)":              ["Intermediate", "Women"],
+"Women: Advanced (14:16)":                  ["Advanced", "Women"],
+"Women: Masters (11:16)":                   ["Masters (40+)", "Women"],
+
+"Non-Binary (10:32)":                       ["Non-Binary", "Open"],
+"Singlespeed & Tracklocross (10:30)":       ["Singlespeed", "Open"]
+}

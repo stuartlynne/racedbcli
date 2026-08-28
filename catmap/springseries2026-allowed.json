@@ -1,0 +1,20 @@
+
+[
+  [ "Cat 1/2",    None, (None,None), ["Elite", "Cat 1", "Cat 2", "Master", "Cat 3"] ],
+
+  [ "Cat 3",      None, (None,None), ["Cat 3", "Cat 4", "Under 17" ] ],
+  [ "Cat 3",      "F",  (None,None), ["Cat 1", "Cat 2", "Cat 3", "Cat 4", "Under 17" ] ],
+
+  [ "Cat 4",      None, (None,None), ["Cat 4", "Cat 5", "Under 17", "Under 15" ] ],
+  [ "Cat 5",      None, (None,None), ["Cat 5", "Under 17", "Under 15" ] ],
+
+  [ "Cat 1/2/3",  "F",  (None,None), ["Elite", "Cat 1", "Cat 2", "Master"] ],
+  [ "Cat 4/5",    "F",  (None,None), ["Cat 4", "Cat 5", "Under 17", "Under 15", "Master Women" ] ],
+
+  [ "Master",     "M",  (None,None), ["Master 35-44", "Master 45-54", "Master 55-64", "Master 65+"] ],
+  [ "Master 40+", "M",  (40,None),   ["Master 35-44", "Master 45-54", "Master 55-64", "Master 65+"] ],
+  [ "Master",     "F",  (30,None),   ["Cat 2", "Cat 3", "Cat 4"] ],
+  [ "Master 40+", "F",  (35,None),   ["Cat 2", "Cat 3", "Cat 4"] ],
+  [ "Time Trial", None, (None,None), [] ],
+  [ "Time Trial Merckx", None, (None,None), [] ]
+]

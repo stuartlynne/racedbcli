@@ -1,0 +1,14 @@
+{
+  "Cat 1/2 Men": [ "Cat 1/2", "Open" ],
+  "Cat 1/2/3 Women": [ "Cat 1/2/3", "Women" ],
+  "Cat 3 Men": [ "Cat 3", "Open" ],
+  "Cat 4 Men": [ "Cat 4", "Open" ],
+  "Cat 4/5 Women": [ "Cat 4/5", "Women" ],
+  "Cat 5 Men": [ "Cat 5", "Open" ],
+  "Master Men": [ "Master", "Open" ],
+  "Men's League 40+": [ "Master 40+", "Open" ],
+  "Time Trial Women": [ "Time Trial"],
+  "Time Trial Men": [ "Time Trial"],
+  "Time Trial Merckx Women": [ "Time Trial Merckx"],
+  "Time Trial Merckx Men": [ "Time Trial Merckx"]
+}
