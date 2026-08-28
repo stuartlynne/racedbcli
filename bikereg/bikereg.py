@@ -15,7 +15,7 @@ import pandas as pd
 import psycopg2
 import psycopg2.extras
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 from urllib.parse import urljoin
 if __name__ == "__main__":
     sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
@@ -27,6 +27,7 @@ from libs.ccn import GetCCN
 #from libs.categorymap import CategoryMap
 from libs.catmap import CatMap
 from libs.lib import gprint, yprint
+from libs.mcpconfig import load_mcp_host
 from cli.competition import create_competition_from_template
 from enum import Enum
 
@@ -108,6 +109,8 @@ class GetBikeReg:
         bikereg_password=None,
         discipline=None,
         tt_special=False,
+        force_age_categories=False,
+        proper_age_categories=False,
     ):
         self.racedb = racedb
         self.ccn = ccn
@@ -130,6 +133,8 @@ class GetBikeReg:
         self.registrations = []
         self.discipline = discipline
         self.tt_special = tt_special
+        self.force_age_categories = force_age_categories
+        self.proper_age_categories = proper_age_categories
 
         print(f"Initialized GetBikeReg with csvfile={self.csvfile} event_id={self.event_id} discipline={self.discipline}", file=sys.stdout)
 
@@ -150,6 +155,87 @@ class GetBikeReg:
     @staticmethod
     def _is_time_trial_category(category):
         return isinstance(category, str) and category.startswith("Time Trial")
+
+    @staticmethod
+    def _calculate_age_from_dob(dob_value):
+        if not dob_value:
+            return None
+        if isinstance(dob_value, date):
+            dob_date = dob_value
+        else:
+            try:
+                dob_date = datetime.strptime(str(dob_value).strip(), "%Y-%m-%d").date()
+            except ValueError:
+                try:
+                    dob_date = datetime.strptime(str(dob_value).strip(), "%m/%d/%Y").date()
+                except ValueError:
+                    return None
+        today = date.today()
+        return today.year - dob_date.year - ((today.month, today.day) < (dob_date.month, dob_date.day))
+
+    def _select_ccn_license_holder(self, candidates, dob=None, racedb_license_holders=None, uci_code=None):
+        if not candidates:
+            return None, None
+        if len(candidates) == 1:
+            return candidates[0], None
+
+        print(f"  Multiple CCN matches: {len(candidates)}", file=sys.stderr)
+
+        uci_code = (uci_code or "").strip().replace(" ", "")
+        if uci_code:
+            matches = [c for c in candidates if str(c.get("uci_id", "")).strip() == uci_code]
+            if len(matches) == 1:
+                print(f"  CCN disambiguated by BikeReg UCI Code: {uci_code}", file=sys.stderr)
+                return matches[0], "multiple_ccn_matches_resolved_by_bikereg_uci"
+
+        race_license_candidates = [
+            c for c in candidates
+            if str(c.get("license_type") or "").startswith(("Provincial RACE", "UCI RACE"))
+        ]
+        if len(race_license_candidates) == 1:
+            print(
+                f"  CCN disambiguated by race-license type: {race_license_candidates[0].get('license_type')}",
+                file=sys.stderr,
+            )
+            return race_license_candidates[0], "multiple_ccn_matches_resolved_by_race_license"
+
+        racedb_uci_ids = {
+            str(holder.get("uci_id", "")).strip()
+            for holder in (racedb_license_holders or [])
+            if holder.get("uci_id")
+        }
+        racedb_license_codes = {
+            str(holder.get("license_code", "")).strip()
+            for holder in (racedb_license_holders or [])
+            if holder.get("license_code")
+        }
+
+        if racedb_uci_ids:
+            matches = [c for c in candidates if str(c.get("uci_id", "")).strip() in racedb_uci_ids]
+            if len(matches) == 1:
+                print(f"  CCN disambiguated by RaceDB UCI ID: {matches[0].get('uci_id')}", file=sys.stderr)
+                return matches[0], "multiple_ccn_matches_resolved_by_racedb_uci"
+
+        if racedb_license_codes:
+            matches = [c for c in candidates if str(c.get("license_number", "")).strip() in racedb_license_codes]
+            if len(matches) == 1:
+                print(f"  CCN disambiguated by RaceDB license: {matches[0].get('license_number')}", file=sys.stderr)
+                return matches[0], "multiple_ccn_matches_resolved_by_racedb_license"
+
+        expected_age = self._calculate_age_from_dob(dob)
+        if expected_age is not None:
+            matches = [c for c in candidates if c.get("age") == expected_age]
+            if len(matches) == 1:
+                print(f"  CCN disambiguated by age {expected_age}", file=sys.stderr)
+                return matches[0], "multiple_ccn_matches_resolved_by_age"
+
+        for idx, candidate in enumerate(candidates):
+            print(
+                f"    CCN candidate[{idx}]: uci={candidate.get('uci_id')} lic={candidate.get('license_number')} "
+                f"age={candidate.get('age')} type={candidate.get('license_type')}",
+                file=sys.stderr,
+            )
+        return None, "multiple_ccn_matches_unresolved"
 
     @staticmethod
     def format_dob(value):
@@ -574,9 +660,17 @@ class GetBikeReg:
             #    racedb_license_holder = racedb_license_holders[0]
 
             ccn_license_holders = self.ccn.get_license_holders(first_name, last_name, )
-            if ccn_license_holders and len(ccn_license_holders) == 1:
+            selected_ccn_license_holder, ccn_resolution = self._select_ccn_license_holder(
+                ccn_license_holders,
+                dob=dob,
+                racedb_license_holders=racedb_license_holders,
+                uci_code=br.get('UCI Code'),
+            )
+            if ccn_resolution:
+                br['lookup_warning'] = ccn_resolution
+            if selected_ccn_license_holder:
                 self.stats['ccn_found'] += 1
-                ccn_license_holder = ccn_license_holders[0]
+                ccn_license_holder = selected_ccn_license_holder
                 print('  CCN License Holder:', ccn_license_holder, file=sys.stderr)
                 licenses = ccn_license_holder['licenses']
                 road = licenses.get('Road', None)
@@ -586,29 +680,31 @@ class GetBikeReg:
             else:
                 license_categories = {}
 
-            self.stats['both_found'] += 1 if ccn_license_holders and racedb_license_holders else 0
+            self.stats['both_found'] += 1 if selected_ccn_license_holder and racedb_license_holders else 0
 
             br['licenses'] = license_categories
 
-            if ccn_license_holders and racedb_license_holders:
+            if selected_ccn_license_holder and racedb_license_holders:
                 yprint(f"  Found: {first_name} {last_name} {dob} {gender} in RaceDB and CCN", file=sys.stdout)
-                uciIdFlag = not self.check_a_or_b(ccn_license_holders[0]["uci_id"], racedb_license_holders[0]["uci_id"] )
-                licenseNumberFlag =  not self.check_a_or_b(ccn_license_holders[0]["license_number"], racedb_license_holders[0]["license_code"])
+                uciIdFlag = not self.check_a_or_b(selected_ccn_license_holder["uci_id"], racedb_license_holders[0]["uci_id"] )
+                licenseNumberFlag =  not self.check_a_or_b(selected_ccn_license_holder["license_number"], racedb_license_holders[0]["license_code"])
                 info = []
                 if uciIdFlag:
-                    yprint(f"  UCI ID does not match: {ccn_license_holders[0]['uci_id']} != {racedb_license_holders[0]['uci_id']}", file=sys.stdout)
+                    yprint(f"  UCI ID does not match: {selected_ccn_license_holder['uci_id']} != {racedb_license_holders[0]['uci_id']}", file=sys.stdout)
                     info.append('UCI_ID')
                 if licenseNumberFlag:
-                    yprint(f"  License Number does not match: {ccn_license_holders[0]['license_number']} != {racedb_license_holders[0]['license_code']}", 
+                    yprint(f"  License Number does not match: {selected_ccn_license_holder['license_number']} != {racedb_license_holders[0]['license_code']}",
                           file=sys.stdout)
                     info.append('License Number')
                 if uciIdFlag or licenseNumberFlag:
                     self.racedb.update_license_holder(first_name=first_name, last_name=last_name, dob=dob, gender=gender,
-                                  uci_id=ccn_license_holders[0]["uci_id"], license_number=ccn_license_holders[0]["license_number"], msg=info)
-                br['uci_id'] = ccn_license_holders[0]["uci_id"]
-                br['license_number'] = ccn_license_holders[0]["license_number"]
-                br['license_type'] = ccn_license_holders[0]["license_type"]
+                                  uci_id=selected_ccn_license_holder["uci_id"], license_number=selected_ccn_license_holder["license_number"], msg=info)
+                br['uci_id'] = selected_ccn_license_holder["uci_id"]
+                br['license_number'] = selected_ccn_license_holder["license_number"]
+                br['license_type'] = selected_ccn_license_holder["license_type"]
                 br['license_check'] = True
+                if ccn_resolution:
+                    yprint(f"  ERROR: CCN lookup required disambiguation: {ccn_resolution}", file=sys.stdout)
             elif racedb_license_holders:
                 yprint(f"  Found: {first_name} {last_name} {dob} {gender} in RaceDB", file=sys.stdout)
                 br['license_number'] = racedb_license_holders[0]['license_code']
@@ -684,9 +780,12 @@ class GetBikeReg:
             license_number = br.get('license_number', None)
             license_categories = br['licenses']
             requested_category = br['requested_category']
+            original_requested_category = requested_category
             license_type = br.get('license_type', None)
             license_check = br.get('license_check', False)
             purchases = self.racedb.purchases.get((last_name, first_name), [])
+            kmh = None
+            lookup_warning = br.get('lookup_warning')
 
             if self.tt_special and self._is_time_trial_category(requested_category):
                 person_key = (last_name, first_name, dob)
@@ -701,6 +800,14 @@ class GetBikeReg:
                         f"  TT special: {last_name}, {first_name} only has TT registrations, using [{requested_category}]",
                         file=sys.stderr,
                     )
+
+            if self._is_time_trial_category(requested_category):
+                kmh = self.catmap.estimate_tt_kmh(
+                    license_categories=license_categories,
+                    gender=gender,
+                    discipline='Road',
+                ) if self.catmap else None
+                print(f"  TT kmh estimate: {kmh}", file=sys.stderr)
 
             print(f"Processing reg [{i}]: {last_name}, {first_name}, {dob}, {gender},", file=sys.stdout)
             print(f"  Age: {age} Purchases: {purchases}", file=sys.stdout)
@@ -719,6 +826,75 @@ class GetBikeReg:
             print('  Licenses:', licenses, file=sys.stderr)
             print(f"  Requested: {requested_category}", file=sys.stderr)
 
+            force_age_note = None
+            proper_age_note = None
+            if self.force_age_categories and self.catmap and requested_category:
+                requested_has_no_requirements = self.catmap.category_has_no_requirements(requested_category)
+                requested_requires_license = self.catmap.category_requires_license(requested_category)
+                has_license = any(
+                    lic
+                    for license_list in (licenses or {}).values()
+                    for lic in (license_list or [])
+                    if lic
+                )
+
+                if requested_requires_license:
+                    if not has_license:
+                        requested_category = "TBD"
+                        license_check = False
+                        force_age_note = (
+                            f"FORCED AGE CATEGORY: requested [{original_requested_category}] "
+                            f"requires a license, but none was found; using [TBD]"
+                        )
+                        print(
+                            f"  Force age categories: no qualifying license for [{original_requested_category}], using [TBD]",
+                            file=sys.stderr,
+                        )
+                    else:
+                        forced_category = self.catmap.choose_license_category(
+                            allowed_categories=allowed_categories,
+                            requested_category=requested_category,
+                        )
+                        if forced_category and forced_category != requested_category:
+                            print(
+                                f"  Force age categories: remapping requested [{requested_category}] to license category [{forced_category}]",
+                                file=sys.stderr,
+                            )
+                            requested_category = forced_category
+                            force_age_note = (
+                                f"FORCED AGE CATEGORY: requested [{original_requested_category}] "
+                                f"remapped to [{requested_category}] from license"
+                            )
+                        elif not forced_category and not requested_has_no_requirements:
+                            requested_category = "TBD"
+                            license_check = False
+                            force_age_note = (
+                                f"FORCED AGE CATEGORY: requested [{original_requested_category}] "
+                                f"did not map to a restricted license category; using [TBD]"
+                            )
+                            print(
+                                f"  Force age categories: no restricted category matched license for [{original_requested_category}], using [TBD]",
+                                file=sys.stderr,
+                            )
+            elif self.proper_age_categories and self.catmap and requested_category:
+                requested_has_no_requirements = self.catmap.category_has_no_requirements(requested_category)
+                requested_requires_license = self.catmap.category_requires_license(requested_category)
+                if requested_requires_license and not requested_has_no_requirements:
+                    proper_category = self.catmap.choose_license_category(
+                        allowed_categories=allowed_categories,
+                        requested_category=requested_category,
+                    )
+                    if proper_category and proper_category != requested_category:
+                        print(
+                            f"  Proper age categories: remapping requested [{requested_category}] to [{proper_category}]",
+                            file=sys.stderr,
+                        )
+                        requested_category = proper_category
+                        proper_age_note = (
+                            f"PROPER AGE CATEGORY: requested [{original_requested_category}] "
+                            f"remapped to [{requested_category}] from license"
+                        )
+
             #self.license_check
             #no_license_check = 0
             #club_license_check = 1
@@ -727,6 +903,14 @@ class GetBikeReg:
             #self.license_check = LicenseCheck.level_for_race_class(comp.get('race_class_name') if isinstance(comp, dict) else None)
         
             check_allowed = self.license_check in [LicenseCheck.LicenseCheckLevel.regional_license_check, LicenseCheck.LicenseCheckLevel.regional_champion_license_check]
+            note_lines = []
+            if lookup_warning:
+                note_lines.append(f"CCN LOOKUP WARNING: {lookup_warning}")
+            if force_age_note:
+                note_lines.append(force_age_note)
+            if proper_age_note:
+                note_lines.append(proper_age_note)
+            note_prefix = ("\n".join(note_lines) + "\n") if note_lines else ""
 
             if requested_category not in allowed_categories and check_allowed:
 
@@ -734,7 +918,8 @@ class GetBikeReg:
                 self.racedb.add_registration(first_name=first_name, last_name=last_name, uci_id=uci_id, gender=gender,
                                              dob=dob,
                                              category=requested_category, license_number=license_number, license_type=license_type, license_check=False,
-                                             note=f"Purchases {purchases}\nCATEGORY NOT ALLOWED [{requested_category}]\nAllowed{allowed_categories}\nLicense: {licenses}",
+                                             kmh=kmh,
+                                             note=f"{note_prefix}Purchases {purchases}\nCATEGORY NOT ALLOWED [{requested_category}]\nLicense: {licenses}",
                                              allowed=False)
                         
             else:
@@ -742,8 +927,8 @@ class GetBikeReg:
                 self.racedb.add_registration(first_name=first_name, last_name=last_name, uci_id=uci_id, gender=gender,
                                              dob=dob,
                                              category=requested_category, license_number=license_number, 
-                                             license_type=license_type, license_check=license_check,
-                                             note=f"Purchases {purchases}\nALLOWED [{requested_category}]\nLicense: {licenses}",
+                                             license_type=license_type, license_check=license_check, kmh=kmh,
+                                             note=f"{note_prefix}Purchases {purchases}\nALLOWED [{requested_category}]\nLicense: {licenses}",
                                              allowed=True)
 
 
@@ -808,6 +993,12 @@ def main():
     parser.add_argument("--cyclocross", action='store_true', help='Use cyclocross license data.')
     parser.add_argument("--road", action='store_true', help='Use road license data.')
     parser.add_argument("--tt-special", action='store_true', help='TT Special.')
+    parser.add_argument("--force-age-categories", "--force_age_categories", action='store_true', help='Force age-based categories from license data when required.')
+    parser.add_argument("--proper-age-categories", "--proper_age_categories", action='store_true', help='Remap restricted categories to the rider age/license category instead of rejecting them.')
+    parser.add_argument("--mcp-host", "--mcp_host", help='Named host in ~/.mcp.json; sets --host and --mcp-url.')
+    parser.add_argument("--mcp-url", "--mcp_url", default=os.getenv("RACEDB_MCP_URL"), help='RaceDB MCP streamable HTTP URL for direct registration upsert.')
+    parser.add_argument("--mcp-token", "--mcp_token", default=os.getenv("RACEDB_MCP_TOKEN") or os.getenv("CONTEXTFORGE_TOKEN"), help='Bearer token for RaceDB MCP, if required.')
+    parser.add_argument("--mcp-dry-run", "--mcp_dry_run", action='store_true', help='Dry-run direct MCP registration upserts.')
     #parser.add_argument('--replace', action='store_true', help='Replace existing competition.')
 
 
@@ -815,6 +1006,7 @@ def main():
     if len(sys.argv) == 1:
         parser.print_help(sys.stderr)
         sys.exit(1)
+    explicit_mcp_url = any(arg == "--mcp-url" or arg == "--mcp_url" or arg.startswith("--mcp-url=") or arg.startswith("--mcp_url=") for arg in sys.argv[1:])
     args = parser.parse_args()
     
     host = args.host        # e.g. http://192.168.250.51:9080
@@ -833,6 +1025,22 @@ def main():
     stop_after_licenseholders = args.stop_after_licenseholders
     road = args.road
     cyclocross = args.cyclocross
+    force_age_categories = args.force_age_categories
+    proper_age_categories = args.proper_age_categories
+    mcp_url = args.mcp_url
+    mcp_token = args.mcp_token
+    mcp_dry_run = args.mcp_dry_run
+
+    if args.mcp_host:
+        try:
+            mcp_config = load_mcp_host(args.mcp_host)
+        except RuntimeError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+        host = mcp_config["racedb_url"]
+        if not explicit_mcp_url:
+            mcp_url = mcp_config.get("mcp_url")
+        print(f"Using MCP host [{args.mcp_host}]: racedb_url={host} mcp_url={mcp_url}", file=sys.stderr)
 
     if args.event:
         parsed = parse_event_arg(args.event)
@@ -909,6 +1117,9 @@ def main():
     if road and cyclocross:
         print("Error: cannot specify both --road and --cyclocross", file=sys.stderr)
         sys.exit(1)
+    if force_age_categories and proper_age_categories:
+        print("Error: cannot specify both --force-age-categories and --proper-age-categories", file=sys.stderr)
+        sys.exit(1)
     if not road and not cyclocross:
         road = True
     if csvfile and event_id is not None:
@@ -935,7 +1146,7 @@ def main():
 
         # Determine categories from either start_date (competition) or category_format
         categories = []
-        fmt_name = None
+        fmt_name = category_format
         if start_date:
             comp, categories = sql.find_competition_categories(name=name, date=start_date)
             if not comp:
@@ -946,10 +1157,11 @@ def main():
                 f"(discipline: {comp.get('discipline_name')}, class: {comp.get('race_class_name')})",
                 file=sys.stdout,
             )
-            fmt_record = (
-                sql.find_category_format_by_id(comp.get('category_format_id')) if isinstance(comp, dict) else None
-            )
-            fmt_name = fmt_record.get('name') if fmt_record else None
+            if not fmt_name:
+                fmt_record = (
+                    sql.find_category_format_by_id(comp.get('category_format_id')) if isinstance(comp, dict) else None
+                )
+                fmt_name = fmt_record.get('name') if fmt_record else None
         #elif category_format:
         #    fmt_name = category_format
         #    fmt, categories = sql.find_categories_for_format_name(category_format)
@@ -991,6 +1203,8 @@ def main():
             bikereg_password=args.bikereg_password,
             discipline='Cyclocross' if cyclocross else 'Road',
             tt_special=args.tt_special,
+            force_age_categories=force_age_categories,
+            proper_age_categories=proper_age_categories,
         )
         source_label = bikereg.source_label
         # Provide allowed category codes for purchase detection
@@ -1086,14 +1300,22 @@ def main():
 
             print('5. competition:', competition, file=sys.stdout)
             #upload_prereg(racedb, competition['id'], csvfile)
-            racedb.upload_registrations(competition['id'], upload=True, bibs=bibs)
+            racedb.upload_registrations(
+                competition['id'],
+                upload=True,
+                bibs=bibs,
+                event_name=target_name or competition.get('name'),
+                mcp_url=mcp_url,
+                mcp_token=mcp_token,
+                mcp_dry_run=mcp_dry_run,
+            )
             gprint('5. ---------------------------------')
             gprint('5. Finished Uploading Registrations', file=sys.stdout)
             gprint('5. ---------------------------------')
             #upload.login_and_upload()
     else:
         # Just create the registratiuons.xlsx file
-        racedb.upload_registrations(None, upload=False)
+        racedb.upload_registrations(None, upload=False, event_name=new_name or name)
 
 if __name__ == "__main__":
     main()
