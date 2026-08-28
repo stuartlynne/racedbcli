@@ -80,6 +80,8 @@ class BikeRegCSV:
                     row['Last Name'] = last_name
                     row['First Name'] = first_name
                     row['Date of Birth'] = dob
+                    if uci_id:
+                        row['UCI Code'] = uci_id
                     print(f"  Alias to: [{lookup}]: {last_name}, {first_name}, {dob}", file=sys.stdout)
                 yield i, row
     
