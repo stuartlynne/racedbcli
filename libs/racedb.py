@@ -225,17 +225,17 @@ class RaceDB:
         pass
 
     def create_registrations_xlsx_file(self, data, file_path=None, teams=False):
-        registration_headers = self.RegistrationHeaders
+        registration_headers = self.RegistrationHeaders.copy()
         if teams:
-            registrations_headers.insert(len(teams)-1, 'Team')
+            registration_headers['Team'] = 20
         create_xlsx_file(file_path, registration_headers, data)
 
 
     def create_registrations_xlsx_in_memory(self, data, teams=False):
         output = io.BytesIO()
-        registration_headers = self.RegistrationHeaders
+        registration_headers = self.RegistrationHeaders.copy()
         if teams:
-            registrations_headers.insert(len(teams)-1, 'Team')
+            registration_headers['Team'] = 20
         df = pd.DataFrame(data, columns=registration_headers)
         df.to_excel(output, index=False, engine='xlsxwriter')
         output.seek(0)
@@ -402,11 +402,11 @@ class RaceDB:
 
                 category_lookup = await self._mcp_category_ids_session(session, competition_id)
 
-                for row in self.registration_data:
+                for i, row in enumerate(self.registration_data):
                     category_id = self._select_mcp_category_id(category_lookup, row.get("Category"), row.get("Gender"))
                     if not category_id:
                         stats["skipped"] += 1
-                        print(f"MCP registration skipped, cannot find category: {row.get('Category')} {row.get('First Name')} {row.get('Last Name')}", file=sys.stderr)
+                        print(f"[{i}] MCP registration skipped, cannot find category: {row.get('Category')} {row.get('First Name')} {row.get('Last Name')}", file=sys.stderr)
                         continue
 
                     license_holder = {
@@ -428,6 +428,8 @@ class RaceDB:
                     if row.get("kmh") not in (None, ""):
                         participant_fields["est_kmh"] = row.get("kmh")
 
+                    print(f"[{i}] MCP registration: {row.get('First Name')} {row.get('Last Name')} category={row.get('Category')} category_id={category_id} license={row.get('License')} uci_id={row.get('UCI ID')}", file=sys.stdout)
+
                     arguments = {
                         "competition_id": int(competition_id),
                         "license_holder": license_holder,
@@ -441,7 +443,7 @@ class RaceDB:
                     except Exception as e:
                         stats["failed"] += 1
                         print(
-                            f"MCP registration failed: {row.get('First Name')} {row.get('Last Name')} "
+                            f"[{i}] MCP registration failed: {row.get('First Name')} {row.get('Last Name')} "
                             f"category={row.get('Category')} category_id={category_id}: {e}",
                             file=sys.stderr,
                         )
@@ -452,7 +454,7 @@ class RaceDB:
                     if getattr(result, "isError", False):
                         stats["failed"] += 1
                         print(
-                            f"MCP registration error: {row.get('First Name')} {row.get('Last Name')} "
+                            f"[{i}] MCP registration error: {row.get('First Name')} {row.get('Last Name')} "
                             f"category={row.get('Category')} category_id={category_id}: {data or result}",
                             file=sys.stderr,
                         )
