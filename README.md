@@ -29,6 +29,24 @@
 N.b. We do not get gender or DoB from CCN, so if creating a new license holder, we set the DoB to {2025-age}-01-01, gender to M and note to "FIX DOB AND GENDER".
 
 
+## Uplifter Purchase Reports
+
+`ccn/ccn.py --event-id ...` (or `--event-name ...`) downloads both registration
+and purchased-product reports to `ccn_event.csv` and `ccn_purchases.csv`.
+Use `--uplifter-update` to regenerate both before downloading. A missing purchase
+report file is generated automatically; download/report errors stop the import.
+Override the purchase output with `--uplifter-purchases-output`.
+
+For offline imports, supply `--csvfile registrations.csv --purchases-csv purchases.csv`.
+Use the **Purchased Products w/ registration information** report, not the
+Fulfilment report. Purchases are joined by receipt ID and included in registration
+notes (both XLSX and MCP uploads). Multiple race entries for one identity share
+the purchase note. Shared-family receipts are explicitly marked as needing
+confirmation; unmatched purchases are reported on stderr, never guessed.
+
+`tests/fetchccnreg.py` also downloads the companion purchase CSV; use
+`--purchases-output` to change its destination. It does not upload to RaceDB.
+
 ## Workflow
 Pre-event Workflow becomes:
 - create event with new date and name, competition.py
@@ -47,6 +65,5 @@ Event workflow for each race:
 - sync start lists, crossmgr files and previous race results (if any) to results site, aswssh sync
 - time race with crossmgr
 - if last race, sync last results to results site
-
 
 

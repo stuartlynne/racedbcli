@@ -2,6 +2,11 @@
 
 import sys
 import os
+
+if __name__ == "__main__":
+    # Prefer this repository's packages over unrelated installed packages.
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import io
 import json
 import autopage, argparse
@@ -13,8 +18,6 @@ import psycopg2
 import psycopg2.extras
 import time
 from urllib.parse import urljoin
-if __name__ == "__main__":
-    sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from libs.autopageex import AutoPagerEx
 from libs.racedb import RaceDB
 from libs.racedbsql import RaceDBSQL
@@ -23,7 +26,9 @@ from libs.ccn import GetCCN
 from libs.catmap import CatMap
 from libs.lib import gprint, yprint
 from libs.ccncsv import CCNRegCSV
+from libs.ccnpurchases import read_purchases, match_purchases
 from libs.mcpconfig import load_mcp_host
+from libs.uplifter import DEFAULT_REPORT, UplifterError, UplifterReports
 from cli.competition import create_competition_from_template
 
 # This script will process a ccnreg CSV file to load into RaceDB competition.
@@ -48,6 +53,7 @@ class GetCCNReg:
         self.csvfile = csvfile
         self.ccnregcsv = CCNRegCSV(csvfile)
         self.registrations = []
+        self.source_registrations = []
         self.allowed_codes = None
 
     # check license holder
@@ -72,7 +78,8 @@ class GetCCNReg:
         
     def process_ccncsv(self):
         for i, br in self.ccnregcsv.get_next():
-            print(f"Processing[{i}]: {br}", file=sys.stdout)
+            self.source_registrations.append(br)
+            print(f"Processing[{i}]: {br}", file=sys.stderr)
             first_name = br['First Name']
             last_name = br['Last Name']
             dob = br['Date of Birth']
@@ -173,11 +180,11 @@ class GetCCNReg:
         print()
         print()
 
-    def process_registrations(self):
+    def process_registrations(self, purchase_notes=None):
 
         for i, br in enumerate(self.registrations):
 
-            print('-----------------------------------')
+            print('[{i}]-----------------------------------')
             #print('br:', br, file=sys.stderr)
 
             first_name = br['First Name']
@@ -224,6 +231,9 @@ class GetCCNReg:
             note=f"ALLOWED [{requested_category}] LICENSE {licenses}"
             if purchases and len(purchases) > 0:
                 note = f"PURCHASED [{', '.join(purchases)}] {note}"
+            product_notes = (purchase_notes or {}).get(br.get('Reg ID'), [])
+            if product_notes:
+                note = f"{'; '.join(product_notes)}; {note}"
             self.racedb.add_registration(first_name=first_name, last_name=last_name, uci_id=uci_id, gender=gender,
                                          dob=dob,
                                          category=requested_category, license_number=license_number, 
@@ -244,6 +254,17 @@ def main():
     parser.add_argument('--username', type=str, default=None, help='authentication username')
     parser.add_argument('--password', type=str, default=None, help='authentication password')
     parser.add_argument('--csvfile', type=str, default=None, help='CCN CSV file')
+    parser.add_argument('--event-id', '--event_id', help='Uplifter event id; downloads the CCN registration CSV.')
+    parser.add_argument('--event-name', '--event_name', help='Exact Uplifter event name; downloads the CCN registration CSV.')
+    parser.add_argument('--uplifter-env-file', default='.ccn.env', help='Uplifter credentials env file.')
+    parser.add_argument('--uplifter-username', default=os.getenv("CCN_LOGIN") or os.getenv("LOGIN"), help='Uplifter login username.')
+    parser.add_argument('--uplifter-password', default=os.getenv("CCN_PASSWORD") or os.getenv("PASSWORD"), help='Uplifter login password.')
+    parser.add_argument('--uplifter-report', default=DEFAULT_REPORT, help='Uplifter report name to download.')
+    parser.add_argument('--uplifter-output', default='ccn_event.csv', help='Downloaded Uplifter CSV output path.')
+    parser.add_argument('--purchases-csv', help='Purchased Products report to accompany --csvfile.')
+    parser.add_argument('--uplifter-purchases-output', default='ccn_purchases.csv', help='Downloaded Uplifter purchases CSV output path.')
+    parser.add_argument('--uplifter-update', action='store_true', help='Regenerate registration and purchase reports before downloading.')
+    parser.add_argument('--uplifter-timeout', type=int, default=300, help='Seconds to wait for --uplifter-update.')
     parser.add_argument('--template_date', type=str, help='Copy the competition from this date.')
     parser.add_argument('--start_date', type=str, help='Start date of the competition in YYYY-MM-DD format.')
     parser.add_argument('--new_name', type=str, help='Name of the competition.')
@@ -284,6 +305,51 @@ def main():
         if not explicit_mcp_url:
             args.mcp_url = mcp_config.get("mcp_url")
         print(f"Using MCP host [{args.mcp_host}]: racedb_url={host} mcp_url={args.mcp_url}", file=sys.stderr)
+
+    ccn_event_sources = [bool(csvfile), bool(args.event_id), bool(args.event_name)]
+    if sum(ccn_event_sources) != 1:
+        print("Error: specify exactly one input source: --csvfile, --event-id, or --event-name", file=sys.stderr)
+        sys.exit(1)
+
+    purchases_csv = args.purchases_csv
+    if purchases_csv and not args.csvfile:
+        parser.error('--purchases-csv requires --csvfile; event downloads fetch purchases automatically')
+    if (args.event_id or args.event_name) and os.path.abspath(args.uplifter_output) == os.path.abspath(args.uplifter_purchases_output):
+        parser.error('Registration and purchase report output paths must differ')
+
+    if args.event_id or args.event_name:
+        try:
+            uplifter = UplifterReports(
+                username=args.uplifter_username,
+                password=args.uplifter_password,
+                env_file=args.uplifter_env_file,
+            )
+            csvfile, event_info, _, _ = uplifter.fetch_registration_report(
+                event_id=args.event_id,
+                event_name=args.event_name,
+                report=args.uplifter_report,
+                file_format='csv',
+                output=args.uplifter_output,
+                update=args.uplifter_update,
+                timeout_seconds=args.uplifter_timeout,
+            )
+            csvfile = str(csvfile)
+            purchases_csv = uplifter.fetch_purchase_report(
+                event_info['event_id'], output=args.uplifter_purchases_output,
+                update=args.uplifter_update, timeout_seconds=args.uplifter_timeout,
+            )
+            print(
+                f"Uplifter event {event_info['event_id']}: wrote registration CSV to {csvfile}",
+                file=sys.stderr,
+            )
+        except UplifterError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+
+    try:
+        product_purchases = list(read_purchases(purchases_csv)) if purchases_csv else []
+    except (OSError, ValueError) as exc:
+        parser.error(str(exc))
 
     #host = host.removeprefix("https://").removeprefix("http://").split(":")[0]
 
@@ -326,6 +392,12 @@ def main():
         gprint('1. Processing ccnreg CSV file:', csvfile, file=sys.stdout)
         gprint('1. ---------------------------------')
         ccnreg.process_ccncsv()
+        purchase_notes, purchase_warnings = match_purchases(ccnreg.source_registrations, product_purchases)
+        print(f"Uplifter purchases: {len(product_purchases)} product rows, "
+              f"{len(purchase_notes)} registration rows annotated, "
+              f"{len(purchase_warnings)} unmatched/ambiguous rows", file=sys.stderr)
+        for warning in purchase_warnings:
+            print(f"Warning: {warning}", file=sys.stderr)
         gprint('1. ---------------------------------')
         gprint('1. Finished Processing ccnreg CSV file:', csvfile, file=sys.stdout)
         gprint('1. ---------------------------------')
@@ -337,7 +409,7 @@ def main():
         gprint('2. ---------------------------------')
         gprint('2. Processing Registrations:', csvfile, file=sys.stdout)
         gprint('2. ---------------------------------')
-        ccnreg.process_registrations()
+        ccnreg.process_registrations(purchase_notes=purchase_notes)
         gprint('2. ---------------------------------')
         gprint('2. Finished Processing Registrations:', csvfile, file=sys.stdout)
         gprint('2. ---------------------------------')
