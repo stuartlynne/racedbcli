@@ -2,6 +2,11 @@
 
 import sys
 import os
+
+if __name__ == "__main__":
+    # Prefer this repository's packages over unrelated installed packages.
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import io
 import json
 import csv
@@ -17,8 +22,6 @@ import psycopg2.extras
 import time
 from datetime import datetime, timezone, date
 from urllib.parse import urljoin
-if __name__ == "__main__":
-    sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from libs.autopageex import AutoPagerEx
 from libs.racedb import RaceDB
 from libs.racedbsql import RaceDBSQL
