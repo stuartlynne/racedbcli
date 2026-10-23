@@ -1,5 +1,5 @@
 [
-["Open",          None, [None, None], [] ],
+["Launch",        None, [None, None], [] ],
 ["U13",           "M",  [None, 12],   [] ],
 ["U15",           "M",  [13, 14],     [] ],
 ["U17",           "M",  [15, 16],     [] ],
@@ -17,6 +17,7 @@
 ["Intermediate",  "F",  [None, None], [] ],
 ["Advanced",      "F",  [None, None], [] ],
 ["Masters (40+)", "F",  [40, None],   [] ],
+["Masters (55+)", "F",  [55, None],   [] ],
 
 ["Non-Binary",    None, [None, None], [] ],
 ["Singlespeed",   None, [None, None], [] ]
