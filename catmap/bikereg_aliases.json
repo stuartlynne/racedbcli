@@ -1,5 +1,7 @@
 
 { 
+    "chambers, kristine, 1977-08-10": ["chambers", "kristine", "1977-08-10", "", "F"],
+    "carlile, cam, 1992-07-17": ["carlile", "cameron", "1992-07-17", "10177440767"],
     "brown, matthew, 1969-04-17": ["brown", "matt", "1969-04-17", ""],
     "martin, rich, 1972-03-17": ["martin", "richard", "1972-03-17", ""],
     "mallie, johannes, 1987-10-20": ["mallie", "johannes daniel", "1987-10-20", ""],
@@ -26,6 +28,10 @@
     "peachey, jodie, 1995-07-03": ["peachey", "jodie", "1995-07-05", "00000000000"],
     "dhont, michael, 1964-07-06": ["dhont", "michael", "1964-06-07", ""],
     "rodgers, jacob, 1978-03-03": ["rodgers", "jacob", "1978-03-30", ""],
+    "rodgers, trish, 1978-03-22": ["rodgers", "trisha", "1978-03-22", ""],
+    "chaddock, benjamin, 1985-04-09": ["chaddock", "ben", "1985-04-09", "10050204756"],
+    "bagnalll, stuart, 1988-07-29": ["bagnall", "stuart", "1988-07-29", "10037447135"],
+    "marion, jr, 1984-04-21": ["marion", "jean-roch", "1984-04-21", "10013600087"],
     "bradbury, christopher, 1991-01-11": ["bradbury", "christopher", "1991-01-10", "10037448044"],
     "aparicio, oscar, 1993-01-29": ["aparicio", "oscar", "1993-01-09", ""],
     "moore, dan, 2003-09-29": ["moore", "dan", "2004-09-09", "10153118322"],
