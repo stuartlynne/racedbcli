@@ -365,6 +365,7 @@ class RaceDB:
         return rows[0].get("id")
 
     async def _upload_registrations_mcp_async(self, competition_id, mcp_url, mcp_token=None, bibs=False, dry_run=False):
+        self._require_registrations_for_upload()
         try:
             from mcp import ClientSession
             from mcp.client.streamable_http import streamablehttp_client
@@ -467,6 +468,13 @@ class RaceDB:
                         stats["unchanged"] += 1
         return stats
 
+    def _require_registrations_for_upload(self):
+        if not self.registration_data:
+            raise ValueError(
+                "Refusing to upload zero registrations: existing participants would be cleared. "
+                "Check the source event ID, downloaded data, and category mappings."
+            )
+
     def upload_registrations_mcp(self, competition_id=None, mcp_url=None, mcp_token=None, bibs=False, dry_run=False):
         if not competition_id:
             raise ValueError("competition_id is required for MCP registration upload")
@@ -486,6 +494,8 @@ class RaceDB:
                              waiver=False,
                              mcp_url=None, mcp_token=None, mcp_dry_run=False):
 
+        if upload:
+            self._require_registrations_for_upload()
         if waiver:
             for row in self.registration_data:
                 row['Waiver'] = 'true'
