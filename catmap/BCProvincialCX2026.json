@@ -1,0 +1,174 @@
+{
+  "Elite Men": [
+    "Elite",
+    "Men"
+  ],
+  "Elite Women": [
+    "Elite",
+    "Women"
+  ],
+  "U23 Men": [
+    "Under 23",
+    "Men"
+  ],
+  "U23 Women": [
+    "Under 23",
+    "Women"
+  ],
+  "Master Men (A) 35-44": [
+    "Master 35-44",
+    "Men"
+  ],
+  "Master Men A (35-44)": [
+    "Master 35-44",
+    "Men"
+  ],
+  "Master Women (A) 35-44": [
+    "Master 35-44",
+    "Women"
+  ],
+  "Master Women A (35-44)": [
+    "Master 35-44",
+    "Women"
+  ],
+  "Master Men (B) 45-54": [
+    "Master 45-54",
+    "Men"
+  ],
+  "Master Men B (45-54)": [
+    "Master 45-54",
+    "Men"
+  ],
+  "Master Women (B) 45-54": [
+    "Master 45-54",
+    "Women"
+  ],
+  "Master Women B (45-54)": [
+    "Master 45-54",
+    "Women"
+  ],
+  "Master Men (C) 55-64": [
+    "Master 55-64",
+    "Men"
+  ],
+  "Master Men C (55-64)": [
+    "Master 55-64",
+    "Men"
+  ],
+  "Master Women (C) 55-64": [
+    "Master 55-64",
+    "Women"
+  ],
+  "Master Women C (55-64)": [
+    "Master 55-64",
+    "Women"
+  ],
+  "Master Men (D) 65+": [
+    "Master 65+",
+    "Men"
+  ],
+  "Master Men D (65+)": [
+    "Master 65+",
+    "Men"
+  ],
+  "Master Women (D) 65+": [
+    "Master 65+",
+    "Women"
+  ],
+  "Master Women D (65+)": [
+    "Master 65+",
+    "Women"
+  ],
+  "Junior Men U19": [
+    "Junior",
+    "Men"
+  ],
+  "U19 Men": [
+    "Junior",
+    "Men"
+  ],
+  "Junior Women U19": [
+    "Junior",
+    "Women"
+  ],
+  "U19 Women": [
+    "Junior",
+    "Women"
+  ],
+  "Men U17": [
+    "Under 17",
+    "Men"
+  ],
+  "U17 Men": [
+    "Under 17",
+    "Men"
+  ],
+  "Women U17": [
+    "Under 17",
+    "Women"
+  ],
+  "U17 Women": [
+    "Under 17",
+    "Women"
+  ],
+  "Men U15": [
+    "Under 15",
+    "Men"
+  ],
+  "U15 Men": [
+    "Under 15",
+    "Men"
+  ],
+  "Women U15": [
+    "Under 15",
+    "Women"
+  ],
+  "U15 Women": [
+    "Under 15",
+    "Women"
+  ],
+  "Men U13": [
+    "Under 13",
+    "Men"
+  ],
+  "U13 Men": [
+    "Under 13",
+    "Men"
+  ],
+  "Women U13": [
+    "Under 13",
+    "Women"
+  ],
+  "U13 Women": [
+    "Under 13",
+    "Women"
+  ],
+  "Citizen Men": [
+    "Open",
+    "Men"
+  ],
+  "Citizen Women": [
+    "Open",
+    "Women"
+  ],
+  "Single Speed Men": [
+    "Single Speed",
+    "Men"
+  ],
+  "Single Speed Women": [
+    "Single Speed",
+    "Women"
+  ],
+  "Open (Non-Championship)": [
+    "Open",
+    null
+  ],
+  "Open Women (Non-Championship)": [
+    "Open",
+    "Women"
+  ],
+  "Single Speed": [
+    "Single Speed",
+    null
+  ]
+}
