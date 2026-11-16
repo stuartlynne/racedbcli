@@ -272,6 +272,13 @@ class CatMap:
                 )
 
         normalized_licenses = [lic for lic in (licenses or [None]) if lic]
+        # CBC also encodes masters as separate gender and age-band tokens.
+        # Add an exact equivalent, not a broad "Master Women" eligibility rule.
+        for label, band in zip(licenses, licenses[1:]):
+            if (isinstance(label, str) and label.strip() == 'Master Women'
+                    and isinstance(band, str)
+                    and re.fullmatch(r'\d{2}-\d{2}|\d{2}\+', band.strip())):
+                normalized_licenses.append('Master ' + band.strip())
         if not normalized_licenses:
             normalized_licenses = [None]
 
