@@ -26,6 +26,7 @@ from libs.autopageex import AutoPagerEx
 from libs.racedb import RaceDB
 from libs.racedbsql import RaceDBSQL
 from libs.bikeregcsv import BikeRegCSV
+from libs.bikeregapi import fetch_event_entries
 from libs.ccn import GetCCN
 #from libs.categorymap import CategoryMap
 from libs.catmap import CatMap
@@ -567,12 +568,7 @@ class GetBikeReg:
 
         with requests.Session() as session:
             token = self._api_login(session, username, password)
-            response = session.post(
-                self.REG_URL,
-                json={"token": token, "eventID": event_id},
-                timeout=30,
-            )
-            response.raise_for_status()
+            response = fetch_event_entries(session, self.REG_URL, token, event_id)
             payload = response.json()
             if isinstance(payload, str):
                 payload = json.loads(payload)
