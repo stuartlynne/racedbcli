@@ -75,8 +75,17 @@ class BikeRegCSV:
                 lookup = f"{row['Last Name']}, {row['First Name']}, {dob}".lower()
                 print(f"Registrant[{i}]: lookup {lookup} Alias check", file=sys.stdout)
                 if lookup in self.aliases:
-                    # Alias tuple: (last_name, first_name, dob, uci_id)
-                    last_name, first_name, dob, uci_id = self.aliases[lookup]
+                    # Optional fifth field corrects self-entered BikeReg gender.
+                    alias = self.aliases[lookup]
+                    if not isinstance(alias, list) or len(alias) not in (4, 5):
+                        raise ValueError(f"BikeReg alias [{lookup}] must have 4 or 5 fields")
+                    last_name, first_name, dob, uci_id = alias[:4]
+                    if len(alias) == 5 and alias[4] not in (None, ''):
+                        gender_override = str(alias[4]).strip().upper()
+                        if gender_override not in ('M', 'F'):
+                            raise ValueError(f"BikeReg alias [{lookup}] gender must be M or F")
+                        row['Gender'] = gender_override
+                        print(f"  Alias gender override: [{lookup}] -> {gender_override}", file=sys.stderr)
                     row['Last Name'] = last_name
                     row['First Name'] = first_name
                     row['Date of Birth'] = dob
